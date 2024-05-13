@@ -18,3 +18,6 @@ lex和yacc在UNIX中是标配，所以windows用户需要自己去下载，而li
 
 [Bison Download](https://gnuwin32.sourceforge.net/packages/bison.htm)
 
+安装之后需要配置环境变量，将`bin`目录添加到系统环境变量就行了。
+
+配置好环境变量后，cmd终端能够找到`bison.exe`和`flex.exe`，所以能够执行命令，查看一下版本号看看配置是否正确。
