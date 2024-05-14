@@ -3,4 +3,5 @@ project(myDBMS)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(myDBMS main.cpp)
+add_executable(myDBMS main.cpp shell/shell.cpp shell/shell.h)
+
