@@ -2,10 +2,15 @@
 // Created by Iamnotphage on 2024-05-14.
 //
 #include<iostream>
+#include<cstring>
 #include "shell.h"
 
-shell::shell() {
+// Declare external functions from the lexer and parser
+extern int yyparse(void);
+extern void yy_scan_string(const char* str);
 
+shell::shell() {
+    init();
 }
 
 shell::~shell() {
@@ -13,18 +18,28 @@ shell::~shell() {
 }
 
 void shell::start() {
-    init();
-
-    do{
+    std::string inputLine;
+    while(true){
         printPrompt();
-        std::cin.getline(input, 256);
+        std::getline(std::cin, inputLine);
+        if(inputLine == "exit")break;
 
-    }while(input[0] != 'e');
+        input = strdup(inputLine.c_str());
+
+        // lexical analyze
+        yy_scan_string(input);
+
+        // grammar analyze
+        yyparse();
+
+        free(input);
+        input = nullptr;
+    }
 
 }
 
 void shell::init() {
-    input = (char *)malloc((sizeof(char)) * 256);
+    input = nullptr;
     std::cout << "\033[32m\033[1m" <<
                "  /$$$$$$  /$$   /$$ /$$$$$$$$ /$$   /$$      \n"
                " /$$__  $$| $$  | $$| $$_____/| $$$ | $$      \n"
@@ -38,7 +53,7 @@ void shell::init() {
 }
 
 void shell::printPrompt() {
-    std::cout << "\033[34m\033[1m" << "mysql > " << "\033[0m";
+    std::cout << "\033[34m\033[1m" << "mysql> " << "\033[0m";
 }
 
 

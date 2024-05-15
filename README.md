@@ -22,6 +22,7 @@ ps: 以下`教科书`特指`西电出版社的《编译原理》`
 * Lex(Flex) 2.5.4a
 * YACC(Bison) 2.4.1
 * CLion 2023
+* VSCode 插件`Yash`可以高亮Lex和YACC语法
 
 lex和yacc在UNIX中是标配，所以windows用户需要自己去下载，而linux或者macos用户会方便一些。
 
