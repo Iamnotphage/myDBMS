@@ -17,7 +17,7 @@ void shell::start() {
 
     do{
         printPrompt();
-        std::cin>> input;
+        std::cin.getline(input, 256);
 
     }while(input[0] != 'e');
 
