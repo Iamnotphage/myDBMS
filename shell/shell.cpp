@@ -5,9 +5,10 @@
 #include<cstring>
 #include "shell.h"
 
-// Declare external functions from the lexer and parser
-extern int yyparse(void);
-extern void yy_scan_string(const char* str);
+extern "C" {
+    int yyparse(void);
+    void yy_scan_string(const char* str);
+}
 
 shell::shell() {
     init();

@@ -1,10 +1,12 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
-#include "../shell/shell.h"
 
-void yyerror(const char *s);
+//#include "shell/shell.h"
+
 int yylex(void);
+void yyerror(const char *s);
+
 %}
 
 %union {
@@ -17,6 +19,10 @@ int yylex(void);
 %token INSERT SELECT VALUES
 
 %%
+
+expr:
+    NUMBER  {printf("this is a number");}
+    ;
 
 query:
     insert_query

@@ -74,12 +74,12 @@ User subroutines
 
 **分析源码，需要注意Lex程序中常用的几个全局变量和函数**
 
-| 全局变量/函数      | 说明                                                                               |
-|--------------|----------------------------------------------------------------------------------|
-| char *yytext | 输入序列(字符串)                                                                        |
-| int yyleng   | 输入序列的长度                                                                          |
-| int yylex()  | 词法分析驱动器的入口，扫描输入序列后，匹配到`正则表达式`(最长的那一条)，执行对应的`C代码`，返回代码段返回的值(代码段没写返回值yylex()默认返回0) |
-| int yywrap() | 词法分析器分析结束时，自动调用yywrap()。如果其返回值为1，则结束分析过程；如果返回值为0，则继续扫描下一个输入。                     |
+| 全局变量/函数      | 说明                                                                                              |
+|--------------|-------------------------------------------------------------------------------------------------|
+| char *yytext | 输入序列(字符串)                                                                                       |
+| int yyleng   | 输入序列的长度                                                                                         |
+| int yylex()  | 词法分析驱动器的入口，扫描输入序列后，匹配到`正则表达式`(最长的那一条)，执行对应的`C代码`，返回代码段返回的值(代码段没写返回值yylex()默认返回0)，也就是每个token的标号。 |
+| int yywrap() | 词法分析器分析结束时，自动调用yywrap()。如果其返回值为1，则结束分析过程；如果返回值为0，则继续扫描下一个输入。                                    |
 
 
 ## 例子
@@ -173,6 +173,21 @@ User subroutines
 %left '*' '/'
 ```
 变量`left`代表左结合，同一行的符号优先级相同。下面行的优先级比上面行的高。
+
+**改变yylval的默认类型**
+
+查看下面的表格，yylval默认类型其实是int，但是在yacc源文件中可以这样定义他的union从而实现自定义。
+
+```c++
+%union {
+    int intval;
+    char *strval;
+}
+```
+
+yacc允许yylex()通过yylval传递值：
+
+yacc定义了yylval的union，它将会把yylval的定义写到`y.tab.h`中，所以当`.l`文件中引用了`.tab.h`头文件之后，能够给yylval赋值。（详情查看后续lex和yacc联合使用）
 
 ## 全局变量/函数
 
@@ -269,5 +284,165 @@ void yyerror(const char *s){
 而yyparse()将调用yylex()函数 *(这里因为只由一个YACC程序组成，所以yylex()函数是用户自定义的)* 获取输入的token，并语法分析
 
 匹配到产生式就执行对应的代码段。
+
+# Lex和YACC联合编程
+
+没啥区别，主要在于yylval和yylex()这些变量/函数的链接。
+
+## yylval在Lex程序中的赋值
+yylval是在YACC程序中定义的，而yylex()是在Lex程序中自动生成的(也就是{patterns} {actions}里面的actions)
+
+当前目录下的`test`文件夹中测试了两个文件`test.l`和`test.y`
+
+要保证Lex程序中能给`yylval`赋值，从而让YACC程序进一步操作，就要在Lex程序中添加YACC程序的头文件（**因为`yylval`是在YACC程序中定义的**）
+
+所以编译YACC程序就要顺便生成YACC的头文件，以便Lex程序包含，从而使用`yylval`变量。
+
+## yylex()在YACC程序中被调用
+
+前文提到过，yylex()是在Lex程序中根据模式串自动生成的函数。
+
+YACC程序中，yyparse()将自动调用yylex()程序(这也是为什么YACC单独运行时，需要用户自定义yylex()函数)
+
+所以YACC源程序中要声明yylex()函数。
+
+## 例子
+
+其次，上述Lex单独运行和YACC单独运行时，都自定义了main函数。
+
+下面的例子是main函数定义在`test.y`中，当然也可以在其他文件中定义main()，然后调用`yyparse()`
+
+`test.l`和`test.y`(自己写的一个测试样例，内容很简单，只需要理解如何编译他们)
+
+```c++
+// in test.l
+%{
+#include "test.tab.h"
+%}
+
+NUM [1-9]+[0-9]*|0
+
+%%
+
+{NUM}		                return NUM;
+[ \t]+                     /* ignore whitespace */;
+.
+
+%%
+
+
+int yywrap(){
+return 1;
+}
+```
+
+看一下`test.y`:
+
+```c++
+%{
+    #include <stdio.h>
+    #include <string.h>
+    int yylex(void);
+    void yyerror(char *);
+%}
+
+%token NUM
+
+%%
+expr:
+    NUM {printf("This is a number.\n")};
+    ;
+%%
+void yyerror(char *str){
+    fprintf(stderr,"error:%s\n",str);
+}
+
+int main() // 后续这里可以注释掉，别的地方调用yyparse()
+{
+    yyparse();
+}
+```
+
+大体上是识别数字。
+
+首先要编译`test.l`和`test.y`文件，下面用Flex和Bison演示。
+
+```shell
+flex test.l
+bison -d test.y
+```
+不同的点在于bison命令行参数的`-d`，这里会生成`test.tab.c`和`test.tab.h`文件，从而让lex程序包含yylval。
+
+接下来两个文件编译
+
+```shell
+gcc -o test test.tab.c yy.lex.c
+```
+这样就能够生成`test.exe`文件了，执行是没问题的。
+
+## 模块化
+
+问题在于，我并不想在`test.tab.c`中就直接进入入口`main()`，我可能需要给项目分模块，词法分析、语法分析只是其中一块而已。
+
+这时候就需要将`test.y`中的`main()`删除了，毕竟程序的入口`main()`我们需要放在别的地方。
+
+这样会有两个新问题：
+
+1. 那在别的文件中，怎么调用词法分析、语法分析这一块内容呢？
+2. 上述的测试都是在标准输入/输出中进行的，如果我有一个`shell`,这个`shell`从标准输入中读取字符串，再交给`编译器`这个模块来解析，岂不是lex和YACC要传入字符串了（而不是从标准输入中读取）？
+
+其实都是很好解决的问题：
+
+Flex官方文档给出了如下说明:
+
+`Three routines are available for setting up input buffers for scanning in-memory strings instead of files. `
+
+其中一个就是`yy_scan_string(const char *str)`，这意味着，可以将指定的字符串作为Lex的输入流，然后yylex()函数将从这个输入流中进行词法分析，再将分析结果传给yyparse().
+
+所以，`test.l`和`test.y`这一个模块，可以被外部调用，只需要利用好`yy_scan_string()`和`yyparse()`（因为yyparse()内部会调用yylex()）即可。
+
+下面是一个例子`main.cpp`:
+
+```c++
+//很重要
+int yyparse(void); // 从别的文件找这些函数
+void yy_scan_string(const char* str);
+
+
+int main() {
+    std::string inputLine;
+
+    // 从标准输入读取一行
+    std::getline(std::cin, inputLine);
+
+    // 将输入字符串传递给词法分析器
+    yy_scan_string(inputLine.c_str()); // c风格的string，其实就是char*
+
+    // 调用语法分析器
+    yyparse();
+
+    return 0;
+}
+```
+
+**注意！CPP和C混合编程，C和C++编译器会有不太一样的表现，这里是关于名字改编的问题，上述代码在test文件夹下，用下面的编译命令能够正常运行**
+
+```shell
+flex test.l
+bison -d test.y
+g++ -o lex.yy.c test.tab.c main.cpp
+```
+
+**但是!** 在我的CLion中，却需要将函数声明加上`extern "C"`才能正确链接。
+
+```c++
+//很重要
+extern "C"{
+    int yyparse(void); // 从别的文件找这些函数
+    void yy_scan_string(const char* str);
+}
+```
+
+自己注意就行，总之能够调用这两个函数就可以了。
 
 # 数据库设计
