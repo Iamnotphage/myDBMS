@@ -14,9 +14,7 @@ shell::shell() {
     init();
 }
 
-shell::~shell() {
-
-}
+shell::~shell() = default;
 
 void shell::start() {
     std::string inputLine;
@@ -31,7 +29,17 @@ void shell::start() {
         yy_scan_string(input);
 
         // grammar analyze
-        yyparse();
+        int state = yyparse();
+        if(state == 0){
+            // ACCEPT
+            printf("[INFO] statement accept.\n");
+        }else if(state == 1){
+            // ABORT
+            printf("[INFO] grammar wrong.\n");
+        }else if(state == 2){
+            // NO-MEMORY
+
+        }
 
         free(input);
         input = nullptr;
