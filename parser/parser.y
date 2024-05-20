@@ -14,6 +14,10 @@
     char* chval;
 }
 
+/* Non-Terminated Symbols */
+%type<chval> databaseName tableName columnName
+
+/* Terminated Symbols */
 // System-Control Tokens
 %token SHOW
 %token USE
@@ -53,6 +57,13 @@
 
 %%
 
+/* Start-Statement : make sure that bison don't warn you. */
+startStatement:
+	systemControl
+	| createStatement
+	| queryStatement
+	;
+
 /* System-Control Statements */
 systemControl:
 	CREATE DATABASE databaseName ';'	{printf("[INFO] This is a create database command.\n");} 
@@ -80,7 +91,7 @@ createStatement:
 
 columnsDefinition:
 	columnName columnType								{printf("[INFO] Identified a single-column definition.\n");}
-	| columnName columnType ',' columnsDefinition		{prinf("[INFO] Identified a multi-columns definitions.\n");}
+	| columnName columnType ',' columnsDefinition		{printf("[INFO] Identified a multi-columns definitions.\n");}
 	;
 
 columnName:

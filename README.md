@@ -158,6 +158,29 @@ User subroutines
 
 ## 关于Definitions段
 
+**改变yylval的默认类型**
+
+查看下面的表格，yylval默认类型其实是int，但是在yacc源文件中可以这样定义他的union从而实现自定义。
+
+```c++
+%union {
+    int intval;
+    char *chval;
+}
+```
+
+yacc允许yylex()通过yylval传递值：
+
+yacc定义了yylval的union，它将会把yylval的定义写到`y.tab.h`中，所以当`.l`文件中引用了`.tab.h`头文件之后，能够给yylval赋值。（详情查看后续lex和yacc联合使用）
+
+**非终结符**
+
+```c++
+%type<chval> tableName // 这里chval是上述联合体中定义的char *chval
+```
+
+在后续语法定义中tableName将作为非终结符，这意味着他可以进一步推导。
+
 **终结符**
 
 用`token`定义
@@ -174,20 +197,48 @@ User subroutines
 ```
 变量`left`代表左结合，同一行的符号优先级相同。下面行的优先级比上面行的高。
 
-**改变yylval的默认类型**
+## 关于Productions段
 
-查看下面的表格，yylval默认类型其实是int，但是在yacc源文件中可以这样定义他的union从而实现自定义。
+除了一般的文法，还要注意YACC默认把第一条产生式当作开始的产生式。
+
+**这一点非常重要！**
+
+下面举例说明：
 
 ```c++
-%union {
-    int intval;
-    char *strval;
-}
+// Productions段
+createStatement:
+    CREATE TABLE tableName ';'
+    ;
+
+queryStatement:
+    SELECT columnName FROM tableName ';'
+    ;
+    
+//如果后面还有文法产生式，也将因为无法从S推导，而无法识别
 ```
 
-yacc允许yylex()通过yylval传递值：
+如果先读取到了`SELECT`语句，将无法识别，因为一切语法分析要从第一条产生式开始。
 
-yacc定义了yylval的union，它将会把yylval的定义写到`y.tab.h`中，所以当`.l`文件中引用了`.tab.h`头文件之后，能够给yylval赋值。（详情查看后续lex和yacc联合使用）
+所以在上述例子中，最好是这样定义Productions段:
+
+```c++
+// Productions段
+statements:
+    createStatement
+    | queryStatement
+    ;
+
+createStatement:
+    CREATE TABLE tableName ';'
+    ;
+
+queryStatement:
+    SELECT columnName FROM tableName ';'
+    ;
+```
+
+这样第一条产生式就可以有多种选择。
 
 ## 全局变量/函数
 
