@@ -376,7 +376,7 @@ bison -d test.y
 接下来两个文件编译
 
 ```shell
-gcc -o test test.tab.c yy.lex.c
+gcc -o test test.tab.c lex.yy.c
 ```
 这样就能够生成`test.exe`文件了，执行是没问题的。
 

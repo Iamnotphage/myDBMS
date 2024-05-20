@@ -1,42 +1,70 @@
 %{
-#include <stdio.h>
-#include <stdlib.h>
+	#include <stdio.h>
+	#include <stdlib.h>
 
-//#include "shell/shell.h"
+	//#include "shell/shell.h"
 
-int yylex(void);
-void yyerror(const char *s);
-
+	int yylex(void);
+	void yyerror(const char *s);
 %}
 
+// Define yylval;
 %union {
     int intval;
-    char *strval;
+    char* chval;
 }
 
-%token <intval> NUMBER
-%token <strval> IDENTIFIER STRING
-%token INSERT SELECT VALUES
+// System-Control Tokens
+%token SHOW
+%token USE
+
+// Data-Manipulation Tokens
+%token SELECT
+%token FROM
+%token WHERE
+
+%left AND
+%left OR
+
+%token INSERT
+%token INTO
+%token VALUES
+
+%token DELETE
+
+%token UPDATE
+%token SET
+
+// Data-Definition Keywords
+%token CREATE
+%token DROP
+%token DATABASE
+%token DATABASES
+%token TABLE
+%token TABLES
+
+%token CHAR
+%token INT
+
+// Identifiers and Literals
+%token ID
+%token NUMBER
+%token STRING
 
 %%
 
-expr:
-    NUMBER  {printf("this is a number");}
-    ;
+// System-Control Statements
+systemControl:
+	CREATE DATABASE database ';'	{printf("[INFO] this is a create database command.\n");} 
+	| SHOW DATABASES ';'			{printf("[INFO] this is a show databases command.\n");}
+	| SHOW TABLES ';'				{printf("[INFO] this is a show tables command.\n");}
+	| USE database ';'				{printf("[INFO] this is a use database command.\n");}
+	;
 
-query:
-    insert_query
-  | select_query
-  ;
-
-insert_query:
-    INSERT IDENTIFIER VALUES '(' STRING ')' { printf("Insert into %s values (%s)\n", $2, $5); }
-  ;
-
-select_query:
-    SELECT IDENTIFIER { printf("Select from %s\n", $2); }
-  ;
-
+database:
+	ID
+	;
+	
 %%
 
 void yyerror(const char *s) {
