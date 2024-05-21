@@ -105,13 +105,49 @@ columnType:
 
 // Query Statement.
 queryStatement:
-	SELECT columnsDefinition FROM tableName ';'
-	| SELECT columnsDefinition FROM tableName WHERE conditions ';'
+	SELECT columnNames FROM tableNames ';'				{printf("[INFO] Identified a select command.\n");}
+	| SELECT columnNames FROM tableNames WHERE conditions ';'	{printf("[INFO] Identified a select with conditions command.\n");}
+	;
+
+columnNames:
+	columnName
+	| columnName ',' columnNames
+	;
+
+tableNames:
+	tableName
+	| tableName ',' tableNames
 	;
 
 conditions:
-
+	condition
+	| '(' conditions ')'
+	| conditions AND conditions
+	| conditions OR conditions
 	;
+
+condition:
+	leftOperand operator rightOperand
+	;
+
+leftOperand:
+	columnName
+	;
+
+operator:
+	'<'
+	| '>'
+	| '='
+	| '!''='
+	| '<''>'
+	;
+
+rightOperand:
+	NUMBER
+	| STRING
+	;
+
+
 %%
 
 void yyerror(const char *s) {
