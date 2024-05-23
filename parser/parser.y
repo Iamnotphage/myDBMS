@@ -62,6 +62,9 @@ startStatement:
 	systemControl
 	| createStatement
 	| queryStatement
+	| insertStatement
+	| updateStatement
+	| deleteStatement
 	;
 
 /* System-Control Statements */
@@ -147,7 +150,41 @@ rightOperand:
 	| STRING
 	;
 
+// Insert statement.
+insertStatement:
+	INSERT INTO tableName '(' columnNames ')' VALUES '(' values ')' ';'	{printf("[INFO] Identified a strong-insert command.\n");}
+	| INSERT INTO tableName VALUES '(' values ')' ';'					{printf("[INFO] Identified a weak-insert command.\n");}
+	;
 
+values:
+	value
+	| value ',' values
+	;
+
+value:
+	NUMBER
+	| STRING
+	;
+
+// Update statement.
+updateStatement:
+	UPDATE tableName SET assignments WHERE conditions ';'	{printf("[INFO] Identified a update command.\n");}
+	;
+
+assignments:
+	assignment
+	| assignment ',' assignments
+	;
+
+assignment:
+	columnName '=' value
+	;
+
+// Delete statement.
+deleteStatement:
+	DELETE FROM tableName ';'	{printf("[INFO] Identified a whole-table delete command.\n");}
+	| DELETE FROM tableName WHERE conditions ';'	{printf("[INFO] Identified a delete command.\n");}
+	;
 %%
 
 void yyerror(const char *s) {
