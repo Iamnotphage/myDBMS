@@ -21,7 +21,7 @@ add_executable(myDBMS
         ${SHELL_DIR}/shell.h
         ${SHELL_DIR}/shell.cpp
         main.cpp
-        )
+        engine/Pager.cpp engine/Pager.h engine/BTree.cpp engine/BTree.h engine/Database.cpp engine/Database.h)
 
 # 包含目录
 target_include_directories(myDBMS PRIVATE ${COMPILER_DIR})

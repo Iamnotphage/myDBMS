@@ -3,7 +3,6 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
-    int lineno = 1;
 %}
 
 /* Define keywords */
@@ -104,8 +103,7 @@ STRING      '.*'
 "!"         {return '!';}
 
 
-\n          {lineno++;}
-[ \t]+      ;/* ignore whitespace */
+[ \n\t]+      ;/* ignore whitespace */
 
 %%
 

@@ -13,9 +13,8 @@ public:
     ~shell();
 
 private:
-    char* input;
     void init();
-    void printPrompt();
+    void printPrompt(bool);
 };
 
 

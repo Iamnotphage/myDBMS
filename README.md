@@ -503,3 +503,10 @@ extern "C"{
 概览如下图:
 
 ![arch](./images/myArchitecture.png)
+
+`Shell`和`Compiler`部分属于`Front-End`部分。
+
+`Engine`以及后续的部分属于`Back-End`部分。
+
+这一点参考的官方[Architecture of SQLite](https://www.sqlite.org/arch.html)
+

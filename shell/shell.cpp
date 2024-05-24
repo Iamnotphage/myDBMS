@@ -18,37 +18,57 @@ shell::~shell() = default;
 
 void shell::start() {
     std::string inputLine;
-    while(true){
-        printPrompt();
+    std::string commandBuffer;
+
+    while(true) {
+        printPrompt(commandBuffer.empty());
         std::getline(std::cin, inputLine);
-        if(inputLine == "exit")break;
 
-        input = strdup(inputLine.c_str());
+        // Append the input line to the command buffer
+        commandBuffer += inputLine;
 
-        // tokenizer
-        yy_scan_string(input);
+        // If just a '\n'
+        if(commandBuffer.empty())continue;
 
-        // compiler
-        int state = yyparse();
-        if(state == 0){
-            // ACCEPT
-            printf("[INFO] statement accept.\n");
-        }else if(state == 1){
-            // ABORT
-            printf("[INFO] grammar wrong.\n");
-        }else if(state == 2){
-            // NO-MEMORY
-
+        // If EXIT;
+        if(commandBuffer == "EXIT;" || commandBuffer == "exit;") {
+            printf("Bye");
+            break;
         }
 
-        free(input);
-        input = nullptr;
+        // If the command ends with a semicolon, process it
+        if(commandBuffer.back() == ';') {
+
+            char* input = strdup(commandBuffer.c_str());
+            commandBuffer.clear();
+
+            // Tokenizer
+            yy_scan_string(input);
+
+            // Parser
+            int state = yyparse();
+
+            if(state == 0) {
+                // ACCEPT
+                printf("[INFO] statement accept.\n");
+            } else if(state == 1) {
+                // ABORT
+                printf("[INFO] grammar wrong.\n");
+            } else if(state == 2) {
+                // NO-MEMORY
+                printf("[INFO] no memory.\n");
+            }
+
+            free(input);
+        } else {
+            // Continue to next line input
+            commandBuffer += "\n";
+        }
     }
 
 }
 
 void shell::init() {
-    input = nullptr;
     std::cout << "\033[32m\033[1m" <<
                "  /$$$$$$  /$$   /$$ /$$$$$$$$ /$$   /$$      \n"
                " /$$__  $$| $$  | $$| $$_____/| $$$ | $$      \n"
@@ -61,8 +81,13 @@ void shell::init() {
                << "\033[0m" << std:: endl;
 }
 
-void shell::printPrompt() {
-    std::cout << "\033[34m\033[1m" << "mysql> " << "\033[0m";
+void shell::printPrompt(bool newCommand) {
+    if(newCommand) {
+        std::cout << "\033[34m\033[1m" << "mysql> " << "\033[0m";
+    } else {
+        std::cout << "\033[34m\033[1m" << "    -> " << "\033[0m";
+    }
+
 }
 
 
