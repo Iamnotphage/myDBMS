@@ -497,3 +497,9 @@ extern "C"{
 自己注意就行，总之能够调用这两个函数就可以了。
 
 # 数据库设计
+
+## myDBMS Architecture
+
+概览如下图:
+
+![arch](./images/myArchitecture.png)
