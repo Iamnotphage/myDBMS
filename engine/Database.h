@@ -7,7 +7,11 @@
 
 
 class Database {
+public:
+    Database();
+    ~Database();
 
+    void showDatabases();
 };
 
 

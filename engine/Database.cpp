@@ -3,3 +3,16 @@
 //
 
 #include "Database.h"
+#include <iostream>
+
+Database::Database() {
+
+}
+
+Database::~Database() {
+
+}
+
+void Database::showDatabases() {
+    std::cout<< "TEST" <<std::endl;
+}

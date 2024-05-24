@@ -1,11 +1,12 @@
 %{
 	#include <stdio.h>
 	#include <stdlib.h>
-
-	//#include "shell/shell.h"
+	#include "Database.h"
 
 	int yylex(void);
 	void yyerror(const char *s);
+
+	Database core;
 %}
 
 // Define yylval;
@@ -70,7 +71,10 @@ startStatement:
 /* System-Control Statements */
 systemControl:
 	CREATE DATABASE databaseName ';'	{printf("[INFO] This is a create database command.\n");} 
-	| SHOW DATABASES ';'				{printf("[INFO] This is a show databases command.\n");}
+	| SHOW DATABASES ';'				{
+											// printf("[INFO] This is a show databases command.\n");
+											core.showDatabases();
+										}
 	| SHOW TABLES ';'					{printf("[INFO] This is a show tables command.\n");}
 	| USE databaseName ';'				{printf("[INFO] This is a use database command.\n");}
 	| DROP DATABASE databaseName ';'	{printf("[INFO] This is a drop database command.\n");}

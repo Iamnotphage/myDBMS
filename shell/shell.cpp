@@ -5,10 +5,14 @@
 #include<cstring>
 #include "shell.h"
 
-extern "C" {
-    int yyparse(void);
-    void yy_scan_string(const char* str);
-}
+//extern "C" {
+//    int yyparse(void);
+//    void yy_scan_string(const char* str);
+//}
+
+int yyparse();
+void yy_scan_string(const char* str);
+
 
 shell::shell() {
     init();
@@ -31,7 +35,7 @@ void shell::start() {
         if(commandBuffer.empty())continue;
 
         // If EXIT;
-        if(commandBuffer == "EXIT;" || commandBuffer == "exit;") {
+        if(commandBuffer == "EXIT" || commandBuffer == "exit") {
             printf("Bye");
             break;
         }

@@ -496,6 +496,10 @@ extern "C"{
 
 自己注意就行，总之能够调用这两个函数就可以了。
 
+如果要在`parser.y`中用到cpp的某些特性，比如类或者某些集合，那么你就需要保证你用`lex`和`yacc`编译的文件是`.cpp/.hpp`的，从而尽量避免C和CPP混合编程带来的`undefine reference`的链接问题。
+
+要么纯C要么纯CPP，C和CPP混合的话，还是挺麻烦的，除非你能做到完美分离前后端。
+
 # 数据库设计
 
 ## myDBMS Architecture
