@@ -25,10 +25,10 @@ void shell::start() {
 
         input = strdup(inputLine.c_str());
 
-        // lexical analyze
+        // tokenizer
         yy_scan_string(input);
 
-        // grammar analyze
+        // compiler
         int state = yyparse();
         if(state == 0){
             // ACCEPT

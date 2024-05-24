@@ -1,5 +1,5 @@
 
-/* A Bison compiler, made by GNU Bison 2.4.1.  */
+/* A Bison parser, made by GNU Bison 2.4.1.  */
 
 /* Skeleton interface for Bison's Yacc-like parsers in C
    
@@ -20,11 +20,11 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
-   part or all of the Bison compiler skeleton and distribute that work
+   part or all of the Bison parser skeleton and distribute that work
    under terms of your choice, so long as that work isn't itself a
-   compiler generator using the skeleton or a modified version thereof
-   as a compiler skeleton.  Alternatively, if you modify or redistribute
-   the compiler skeleton itself, you may (at your option) remove this
+   parser generator using the skeleton or a modified version thereof
+   as a parser skeleton.  Alternatively, if you modify or redistribute
+   the parser skeleton itself, you may (at your option) remove this
    special exception, which will cause the skeleton and the resulting
    Bison output files to be licensed under the GNU General Public
    License without this special exception.
@@ -39,14 +39,50 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     NUM = 258
+     SHOW = 258,
+     USE = 259,
+     SELECT = 260,
+     FROM = 261,
+     WHERE = 262,
+     AND = 263,
+     OR = 264,
+     INSERT = 265,
+     INTO = 266,
+     VALUES = 267,
+     DELETE = 268,
+     UPDATE = 269,
+     SET = 270,
+     CREATE = 271,
+     DROP = 272,
+     DATABASE = 273,
+     DATABASES = 274,
+     TABLE = 275,
+     TABLES = 276,
+     CHAR = 277,
+     INT = 278,
+     ID = 279,
+     NUMBER = 280,
+     STRING = 281
    };
 #endif
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+typedef union YYSTYPE
+{
+
+/* Line 1676 of yacc.c  */
+#line 12 "D:/Developer/myDBMS/compiler/parser.y"
+
+    int intval;
+    char* chval;
+
+
+
+/* Line 1676 of yacc.c  */
+#line 85 "D:/Developer/myDBMS/compiler/parser.tab.h"
+} YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
