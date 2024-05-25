@@ -35,3 +35,12 @@ target_include_directories(myDBMS
 
 # 链接必要的库
 target_link_libraries(myDBMS PRIVATE ${FLEX_LIBRARIES} ${BISON_LIBRARIES})
+
+# 移除register关键字
+add_definitions(-Dregister=)
+
+# 设置C++标准
+set_target_properties(myDBMS PROPERTIES CXX_STANDARD 17)
+
+# 静态链接
+set_target_properties(myDBMS PROPERTIES LINK_FLAGS "-static-libgcc -static-libstdc++")

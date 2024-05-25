@@ -76,7 +76,10 @@ systemControl:
 											core.showDatabases();
 										}
 	| SHOW TABLES ';'					{printf("[INFO] This is a show tables command.\n");}
-	| USE databaseName ';'				{printf("[INFO] This is a use database command.\n");}
+	| USE databaseName ';'				{
+											// printf("[INFO] This is a use database command.\n");
+											core.useDatabase($2);
+										}
 	| DROP DATABASE databaseName ';'	{printf("[INFO] This is a drop database command.\n");}
 	| DROP TABLE tableName ';'			{printf("[INFO] This is a drop table command.\n");}
 	;
