@@ -170,3 +170,85 @@ void Database::createDatabase(const std::string &databaseName) {
     }
 }
 
+void Database::showTables() {
+    if(this->currentState == STATE_SYS){
+        std::cout << "[INFO] No database selected" << std::endl;
+    }else if(this->currentState == STATE_DB){
+        std::string dbPath = dataPath + "/" + this->currentDatabase;
+
+        try{
+            if(exists(dbPath) && is_directory(dbPath)){
+                // Start Time
+                clock_t startTime = clock();
+
+                std::set<directory_entry> tableNames;
+                unsigned int nameMaxLength = 0;
+                const std::string title = "Tables_in_" + this->currentDatabase;
+
+                for(const directory_entry& entry : directory_iterator(dbPath)){
+                    if(is_regular_file(entry)){
+                        unsigned int currentLength = entry.path().filename().string().length();
+                        nameMaxLength = currentLength > nameMaxLength ? currentLength : nameMaxLength;
+                        tableNames.insert(entry);
+                    }
+                }
+
+                // max name length must > "Tables_in_...".length().
+                nameMaxLength = nameMaxLength > title.length() ? nameMaxLength : title.length();
+
+                // First-Row
+                std::cout << "+";
+                for(int i = 0; i < nameMaxLength + 2; i++){
+                    std::cout << "-";
+                }
+                std::cout << "+" << std::endl;
+
+                // Second-Row
+                std::cout << "| " << title;
+                for(int i = 0; i < nameMaxLength - title.length(); i++){
+                    std::cout << " ";
+                }
+                std::cout << " |" << std::endl;
+
+                // Third-Row
+                std::cout << "+";
+                for(int i = 0; i < nameMaxLength + 2; i++){
+                    std::cout << "-";
+                }
+                std::cout << "+" << std::endl;
+
+                // Databases Names
+                for(const directory_entry& entry : tableNames){
+                    std::cout << "| " << entry.path().filename().string();
+
+                    for(int i = 0; i < nameMaxLength - entry.path().filename().string().length(); i++){
+                        std::cout << " ";
+                    }
+
+                    std::cout << " |" << std::endl;
+                }
+
+                // Last-Row
+                std::cout << "+";
+                for(int i = 0; i < nameMaxLength + 2; i++){
+                    std::cout << "-";
+                }
+                std::cout << "+" << std::endl;
+
+                // Exexute Time
+                clock_t endTime = clock();
+                std::cout << tableNames.size() << " rows in set ("
+                          << std::fixed << std::setprecision(2)
+                          << (double)(endTime - startTime)/CLOCKS_PER_SEC
+                          << " sec)" << std::endl;
+            }else{
+                std::cout << "[INFO] Database path doesn't exits or is not a directory." << std::endl;
+            }
+        }catch(const filesystem_error& e){
+            std::cerr << "[INFO] " << e.what() << std::endl;
+        }catch(const std::exception& e){
+            std::cerr << "[INFO] " << e.what() << std::endl;
+        }
+    }
+}
+

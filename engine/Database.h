@@ -54,6 +54,13 @@ public:
      * @param databaseName
      */
     void createDatabase(const std::string& databaseName);
+
+    /**
+     * @brief SHOW TABLES;
+     *
+     * Show all the tables in a database.
+     */
+    void showTables();
 private:
     int currentState;
     const std::string dataPath = "../data";
