@@ -108,13 +108,8 @@ void Database::useDatabase(const std::string& databaseName) {
 bool Database::validate(const std::string& databaseName) {
 
     try{
-        if(exists(dataPath) && is_directory(dataPath)){
-            for(const directory_entry& entry : directory_iterator(dataPath)){
-                if(entry.is_directory()){
-                    if(databaseName == entry.path().filename().string())return true;
-                }
-            }
-        }
+        path dbPath = dataPath + "/" + databaseName;
+        return exists(dbPath) && is_directory(dbPath);
     }catch(const filesystem_error& e){
         std::cerr << "[INFO] " << e.what() << std::endl;
     }catch(const std::exception& e){
@@ -193,6 +188,12 @@ void Database::showTables() {
                     }
                 }
 
+
+                if(tableNames.empty()){
+                    std::cout << "Empty set (0.00 sec)" << std::endl;
+                    return;
+                }
+
                 // max name length must > "Tables_in_...".length().
                 nameMaxLength = nameMaxLength > title.length() ? nameMaxLength : title.length();
 
@@ -243,6 +244,39 @@ void Database::showTables() {
                           << " sec)" << std::endl;
             }else{
                 std::cout << "[INFO] Database path doesn't exits or is not a directory." << std::endl;
+            }
+        }catch(const filesystem_error& e){
+            std::cerr << "[INFO] " << e.what() << std::endl;
+        }catch(const std::exception& e){
+            std::cerr << "[INFO] " << e.what() << std::endl;
+        }
+    }
+}
+
+void Database::dropTable(const std::string &tableName) {
+    if(this->currentState == STATE_SYS){
+        std::cout << "[INFO] No database selected" << std::endl;
+    }else if(this->currentState == STATE_DB){
+        std::string tablePath = dataPath + "/" + this->currentDatabase + "/" + tableName;
+
+        try {
+            if (exists(tablePath) && is_regular_file(tablePath)) {
+                // Start Time
+                clock_t startTime = clock();
+
+                // Drop the table.
+                if(remove(tablePath)){
+                    // Exexute Time
+                    clock_t endTime = clock();
+                    std::cout << "Query OK, 0 row affected ("
+                              << std::fixed << std::setprecision(2)
+                              << (double)(endTime - startTime)/CLOCKS_PER_SEC
+                              << " sec)" << std::endl;
+                }else{
+                    std::cout << "[INFO] Drop table failed for unknown reason" << std::endl;
+                }
+            }else{
+                std::cout << "[INFO] Unknown table '" << this->currentDatabase << "." << tableName << "'" << std::endl;
             }
         }catch(const filesystem_error& e){
             std::cerr << "[INFO] " << e.what() << std::endl;

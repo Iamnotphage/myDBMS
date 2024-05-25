@@ -21,6 +21,7 @@ class Database {
 public:
     Database();
     ~Database();
+
     /**
      * @brief SHOW DATABASES;
      *
@@ -61,6 +62,17 @@ public:
      * Show all the tables in a database.
      */
     void showTables();
+
+    /**
+     * @brief DROP TABLE [TABLE];
+     *
+     * Drop the specific table in a selected database.
+     * @param tableName
+     */
+    void dropTable(const std::string& tableName);
+
+
+
 private:
     int currentState;
     const std::string dataPath = "../data";

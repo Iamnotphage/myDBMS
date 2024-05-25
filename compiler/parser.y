@@ -90,7 +90,10 @@ systemControl:
 											// printf("[INFO] This is a show tables command.\n");
 											core.showTables();
 										}
-	| DROP TABLE tableName ';'			{printf("[INFO] This is a drop table command.\n");}
+	| DROP TABLE tableName ';'			{
+											//printf("[INFO] This is a drop table command.\n");
+											core.dropTable($3);
+										}
 	;
 
 databaseName:
