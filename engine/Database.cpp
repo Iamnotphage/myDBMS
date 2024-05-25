@@ -16,11 +16,11 @@ Database::Database() {
 Database::~Database() = default;
 
 void Database::showDatabases() {
-    const std::string dataPath = "../data";
 
     try{
         if(exists(dataPath) && is_directory(dataPath)){
-
+            // Start Time
+            clock_t startTime = clock();
             std::set<directory_entry> databaseNames;
             unsigned int nameMaxLength = 0;
             const std::string title = "Database";
@@ -76,6 +76,13 @@ void Database::showDatabases() {
             }
             std::cout << "+" << std::endl;
 
+            // Exexute Time
+            clock_t endTime = clock();
+            std::cout << databaseNames.size() << " rows in set ("
+                      << std::fixed << std::setprecision(2)
+                      << (double)(endTime - startTime)/CLOCKS_PER_SEC
+                      << " sec)" << std::endl;
+
         }else{
             std::cout << "[INFO] Database path doesn't exits or is not a directory." << std::endl;
         }
@@ -86,8 +93,58 @@ void Database::showDatabases() {
     }
 }
 
-void Database::useDatabase(const std::string databaseName) {
-    std::cout << "Datbase changed." << std::endl;
-    std::cout << "TEST: " << databaseName << std::endl;
+void Database::useDatabase(const std::string& databaseName) {
+    if(!validate(databaseName)) {
+        std::cout << "[INFO] Unknown database " << "'" << databaseName << "'" << std::endl;
+        return;
+    }
+
+    this->currentDatabase = databaseName;
+    this->currentState = STATE_DB;
+
+    std::cout << "Database changed" << std::endl;
+}
+
+bool Database::validate(const std::string& databaseName) {
+
+    try{
+        if(exists(dataPath) && is_directory(dataPath)){
+            for(const directory_entry& entry : directory_iterator(dataPath)){
+                if(entry.is_directory()){
+                    if(databaseName == entry.path().filename().string())return true;
+                }
+            }
+        }
+    }catch(const filesystem_error& e){
+        std::cerr << "[INFO] " << e.what() << std::endl;
+    }catch(const std::exception& e){
+        std::cerr << "[INFO] " << e.what() << std::endl;
+    }
+    return false;
+}
+
+void Database::dropDatabase(const std::string& databaseName) {
+    if(!validate(databaseName)){
+        std::cout << "[INFO] Can't drop database 'test'; database doesn't exist" << std::endl;
+    }
+
+    try{
+        // Start Time
+        clock_t startTime = clock();
+
+        // Drop The Database
+        remove_all(dataPath + "/" + databaseName);
+
+        // Exexute Time
+        clock_t endTime = clock();
+        std::cout << "Query OK, 0 rows in affected ("
+                  << std::fixed << std::setprecision(2)
+                  << (double)(endTime - startTime)/CLOCKS_PER_SEC
+                  << " sec)" << std::endl;
+
+    }catch(const filesystem_error& e){
+        std::cerr << "[INFO] " << e.what() << std::endl;
+    }
+
 }
 

@@ -80,7 +80,10 @@ systemControl:
 											// printf("[INFO] This is a use database command.\n");
 											core.useDatabase($2);
 										}
-	| DROP DATABASE databaseName ';'	{printf("[INFO] This is a drop database command.\n");}
+	| DROP DATABASE databaseName ';'	{
+											// printf("[INFO] This is a drop database command.\n");
+											core.dropDatabase($3);
+										}
 	| DROP TABLE tableName ';'			{printf("[INFO] This is a drop table command.\n");}
 	;
 

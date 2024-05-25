@@ -27,16 +27,30 @@ public:
      * Lists all the databases in data directory.
      */
     void showDatabases();
+
     /**
-     * @brief USE DATBASE;
+     * @brief USE [DATABASE];
      *
-     * Change the current view into the specific datbase.
+     * Change the current view into the specific database.
      *
      * @param databaseName the name of database.
      */
-    void useDatabase(std::string databaseName);
+    void useDatabase(const std::string& databaseName);
+
+    /**
+     * @brief DROP DATABASE [DATABASE];
+     *
+     * Drop the specific database;
+     *
+     * @param databaseName the name of database.
+     */
+    void dropDatabase(const std::string& databaseName);
 private:
     int currentState;
+    const std::string dataPath = "../data";
+    std::string currentDatabase;
+
+    bool validate(const std::string& databaseName);
 };
 
 

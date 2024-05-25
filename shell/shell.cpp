@@ -5,6 +5,7 @@
 #include<cstring>
 #include "shell.h"
 
+// lex和YACC生成C文件就用下面的
 //extern "C" {
 //    int yyparse(void);
 //    void yy_scan_string(const char* str);
