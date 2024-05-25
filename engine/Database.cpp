@@ -133,11 +133,15 @@ void Database::dropDatabase(const std::string& databaseName) {
         clock_t startTime = clock();
 
         // Drop The Database
+        if(this->currentState == STATE_DB && this->currentDatabase == databaseName){
+            this->currentState = STATE_SYS;
+            this->currentDatabase = "";
+        }
         remove_all(dataPath + "/" + databaseName);
 
         // Exexute Time
         clock_t endTime = clock();
-        std::cout << "Query OK, 0 rows in affected ("
+        std::cout << "Query OK, 0 row affected ("
                   << std::fixed << std::setprecision(2)
                   << (double)(endTime - startTime)/CLOCKS_PER_SEC
                   << " sec)" << std::endl;
@@ -146,5 +150,23 @@ void Database::dropDatabase(const std::string& databaseName) {
         std::cerr << "[INFO] " << e.what() << std::endl;
     }
 
+}
+
+void Database::createDatabase(const std::string &databaseName) {
+    if(validate(databaseName)){
+        std::cout << "[INFO] Can't create database '"<< databaseName << "'; database exists" << std::endl;
+    }
+    // Start Time
+    clock_t startTime = clock();
+    if(create_directory(dataPath + "/" + databaseName)){
+        // Exexute Time
+        clock_t endTime = clock();
+        std::cout << "Query OK, 1 row affected ("
+                  << std::fixed << std::setprecision(2)
+                  << (double)(endTime - startTime)/CLOCKS_PER_SEC
+                  << " sec)" << std::endl;
+    }else{
+        std::cout << "[INFO] Can't create database '"<< databaseName << "'" << std::endl;
+    }
 }
 

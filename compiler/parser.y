@@ -70,12 +70,14 @@ startStatement:
 
 /* System-Control Statements */
 systemControl:
-	CREATE DATABASE databaseName ';'	{printf("[INFO] This is a create database command.\n");} 
+	CREATE DATABASE databaseName ';'	{
+											// printf("[INFO] This is a create database command.\n");
+											core.createDatabase($3);
+										} 
 	| SHOW DATABASES ';'				{
 											// printf("[INFO] This is a show databases command.\n");
 											core.showDatabases();
 										}
-	| SHOW TABLES ';'					{printf("[INFO] This is a show tables command.\n");}
 	| USE databaseName ';'				{
 											// printf("[INFO] This is a use database command.\n");
 											core.useDatabase($2);
@@ -84,6 +86,7 @@ systemControl:
 											// printf("[INFO] This is a drop database command.\n");
 											core.dropDatabase($3);
 										}
+	| SHOW TABLES ';'					{printf("[INFO] This is a show tables command.\n");}
 	| DROP TABLE tableName ';'			{printf("[INFO] This is a drop table command.\n");}
 	;
 

@@ -45,6 +45,15 @@ public:
      * @param databaseName the name of database.
      */
     void dropDatabase(const std::string& databaseName);
+
+    /**
+     * @brief CREATE DATABASE [DATABASE];
+     *
+     * Create a database named [DATABASE].
+     *
+     * @param databaseName
+     */
+    void createDatabase(const std::string& databaseName);
 private:
     int currentState;
     const std::string dataPath = "../data";
