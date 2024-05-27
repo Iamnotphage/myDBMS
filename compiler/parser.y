@@ -13,10 +13,13 @@
 %union {
     int intval;
     char* chval;
+
+	struct columnNode* columnHead;
 }
 
 /* Non-Terminated Symbols */
 %type<chval> databaseName tableName columnName
+%type<columnHead> columnsDefinition columnType
 
 /* Terminated Symbols */
 // System-Control Tokens
@@ -97,32 +100,60 @@ systemControl:
 	;
 
 databaseName:
-	ID									{printf("[INFO] Identified a database name.\n");}
+	ID									{
+											// printf("[INFO] Identified a database name.\n");
+										}
 	;
 
 tableName:
-	ID									{printf("[INFO] Identified a table name.\n");}
+	ID									{	
+											//printf("[INFO] Identified a table name.\n");
+										}
 	;
 
 /* Data-Manipulation Statements (CRUD)*/
 
 // Create Statement.
 createStatement:
-	CREATE TABLE tableName '('columnsDefinition')' ';'	{printf("[INFO] This is a create-table command.\n");}
+	CREATE TABLE tableName '('columnsDefinition')' ';'	{
+															// printf("[INFO] This is a create-table command.\n");
+															core.createTable($3, $5);
+														}
 	;
 
 columnsDefinition:
-	columnName columnType								{printf("[INFO] Identified a single-column definition.\n");}
-	| columnName columnType ',' columnsDefinition		{printf("[INFO] Identified a multi-columns definitions.\n");}
+	columnName columnType								{	
+															// printf("[INFO] Identified a single-column definition.\n");
+															$$ = $2;
+															$$->columnName = $1;
+														}
+	| columnName columnType ',' columnsDefinition		{	
+															//printf("[INFO] Identified a multi-columns definitions.\n");
+															$2->columnName = $1;
+															$2->next = $4;
+															$$ = $2;
+														}
 	;
 
 columnName:
-	ID									{printf("[INFO] Identified a column name.\n");}
+	ID									{ 
+											//printf("[INFO] Identified a column name.\n");
+											$$ = $<chval>1;
+										}
 	;
 
 columnType:
-	INT									{printf("[INFO] Identified a INT column type.\n");}
-	| CHAR '(' NUMBER ')'				{printf("[INFO] Identified a CHAR column type.\n");}
+	INT									{	
+											// printf("[INFO] Identified a INT column type.\n");
+											$$ = new struct columnNode;
+											$$->charLength = 0;
+
+										}
+	| CHAR '(' NUMBER ')'				{	
+											// printf("[INFO] Identified a CHAR column type.\n");
+											$$ = new struct columnNode;
+											$$->charLength = $<intval>3;
+										}
 	;
 
 // Query Statement.

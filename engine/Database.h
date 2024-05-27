@@ -9,6 +9,13 @@
 
 #define STATE_SYS 0
 #define STATE_DB 1
+
+struct columnNode{
+    std::string columnName;
+    int charLength;
+    struct columnNode* next = nullptr;
+};
+
 /**
  * @class Database
  * @brief A class to manage and execute SQL command.
@@ -30,7 +37,7 @@ public:
     void showDatabases();
 
     /**
-     * @brief USE [DATABASE];
+     * @brief USE [databaseName];
      *
      * Change the current view into the specific database.
      *
@@ -39,7 +46,7 @@ public:
     void useDatabase(const std::string& databaseName);
 
     /**
-     * @brief DROP DATABASE [DATABASE];
+     * @brief DROP DATABASE [databaseName];
      *
      * Drop the specific database;
      *
@@ -48,11 +55,11 @@ public:
     void dropDatabase(const std::string& databaseName);
 
     /**
-     * @brief CREATE DATABASE [DATABASE];
+     * @brief CREATE DATABASE [databaseName];
      *
-     * Create a database named [DATABASE].
+     * Create a database named [databaseName].
      *
-     * @param databaseName
+     * @param databaseName the name of database.
      */
     void createDatabase(const std::string& databaseName);
 
@@ -64,14 +71,20 @@ public:
     void showTables();
 
     /**
-     * @brief DROP TABLE [TABLE];
+     * @brief DROP TABLE [tableName];
      *
      * Drop the specific table in a selected database.
-     * @param tableName
+     * @param tableName the name of table.
      */
     void dropTable(const std::string& tableName);
 
-
+    /**
+     * @brief CREATE TABLE [tableName] ([columnsDefinitons])
+     *
+     * @param tableName the name of table.
+     * @param columnHead the head of the column nodes.
+     */
+    void createTable(const std::string& tableName, struct columnNode* columnHead);
 
 private:
     int currentState;

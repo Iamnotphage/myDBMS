@@ -286,3 +286,12 @@ void Database::dropTable(const std::string &tableName) {
     }
 }
 
+void Database::createTable(const std::string &tableName, struct columnNode *columnHead) {
+    std::cout << "Table name: " << tableName << std::endl;
+    // create table testCreate (id INT, name CHAR(10), score INT);
+    while(columnHead != nullptr){
+        std::cout << "column name: " << columnHead->columnName << std::endl << "char length: " << columnHead->charLength << std::endl;
+        columnHead = columnHead->next;
+    }
+}
+
