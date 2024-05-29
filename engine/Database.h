@@ -16,6 +16,32 @@ struct columnNode{
     struct columnNode* next = nullptr;
 };
 
+// for SELECT node;
+struct tableNode{
+    std::string tableName;
+    struct tableNode* nextTable;
+};
+
+struct conditionNode{
+    struct conditionNode* left = nullptr;
+    enum op {
+        AND, OR, EQUAL, GREATER, LESS, NOT
+    }op;
+    struct conditionNode* right = nullptr;
+    enum type {
+        INT, STRING, LOGIC
+    }type;
+    int intval;
+    std::string chval;
+};
+
+// SELECT [columnNames] FROM [tables] WHERE [conditions];
+struct selectNode{
+    struct columnNode* columnNames = nullptr;
+    struct tableNode* tables = nullptr;
+    struct conditionNode* conditions = nullptr;
+};
+
 /**
  * @class Database
  * @brief A class to manage and execute SQL command.
@@ -79,19 +105,27 @@ public:
     void dropTable(const std::string& tableName);
 
     /**
-     * @brief CREATE TABLE [tableName] ([columnsDefinitons])
+     * @brief CREATE TABLE [tableName] ([columnsDefinitons]);
      *
      * @param tableName the name of table.
      * @param columnHead the head of the column nodes.
      */
     void createTable(const std::string& tableName, struct columnNode* columnHead);
 
+    /**
+     * @brief SELECT [columnNames] FROM [tables] WHERE [contidions];
+     *
+     * @param node the select-node
+     */
+    void select(struct selectNode* node);
 private:
     int currentState;
     const std::string dataPath = "../data";
     std::string currentDatabase;
 
     bool validate(const std::string& databaseName);
+
+    void traverseConditions(conditionNode *node);
 };
 
 

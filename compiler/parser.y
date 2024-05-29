@@ -15,11 +15,17 @@
     char* chval;
 
 	struct columnNode* columnHead;
+	struct selectNode* selectHead;
+	struct tableNode* tableHead;
+	struct conditionNode* conditionHead;
 }
 
 /* Non-Terminated Symbols */
 %type<chval> databaseName tableName columnName
-%type<columnHead> columnsDefinition columnType
+%type<columnHead> columnsDefinition columnType columnNames
+%type<selectHead> queryStatement
+%type<tableHead> tableNames
+%type<conditionHead> conditions condition operator leftOperand rightOperand
 
 /* Terminated Symbols */
 // System-Control Tokens
@@ -158,46 +164,124 @@ columnType:
 
 // Query Statement.
 queryStatement:
-	SELECT columnNames FROM tableNames ';'				{printf("[INFO] Identified a select command.\n");}
-	| SELECT columnNames FROM tableNames WHERE conditions ';'	{printf("[INFO] Identified a select with conditions command.\n");}
+	SELECT columnNames FROM tableNames ';'				{
+															// printf("[INFO] Identified a select command.\n");
+															$$ = new struct selectNode;
+															$$->columnNames = $2;
+															$$->tables = $4;
+															core.select($$);
+														}
+	| SELECT columnNames FROM tableNames WHERE conditions ';'	
+														{	
+															// printf("[INFO] Identified a select with conditions command.\n");
+															$$ = new struct selectNode;
+															$$->columnNames = $2;
+															$$->tables = $4;
+															$$->conditions = $6;
+															core.select($$);
+														}
 	;
 
 columnNames:
-	columnName
-	| columnName ',' columnNames
+	'*'									{
+											$$ = new struct columnNode;
+											$$->columnName = "*";
+										}
+	| columnName						{
+											$$ = new struct columnNode;
+											$$->columnName = $1;
+										}
+	| columnName ',' columnNames		{
+											$$ = new struct columnNode;
+											$$->columnName = $1;
+											$$->next = $3;
+										}
 	;
 
 tableNames:
-	tableName
-	| tableName ',' tableNames
+	tableName							{
+											$$ = new struct tableNode;
+											$$->tableName = $1;
+										}
+	| tableName ',' tableNames			{
+											$$ = new struct tableNode;
+											$$->tableName = $1;
+											$$->nextTable = $3;
+										}
 	;
 
 conditions:
-	condition
-	| '(' conditions ')'
-	| conditions AND conditions
-	| conditions OR conditions
+	condition							{	
+											$$ = $1;	
+										}
+	| '(' conditions ')'				{	
+											$$ = $2;
+										}
+	| conditions AND conditions			{	
+											$$ = new struct conditionNode;
+											$$->left = $1;
+											$$->right = $3;
+											$$->op = conditionNode::AND;
+											$$->type = conditionNode::LOGIC;
+										}
+	| conditions OR conditions			{
+											$$ = new struct conditionNode;
+											$$->left = $1;
+											$$->right = $3;
+											$$->op = conditionNode::OR;
+											$$->type = conditionNode::LOGIC;
+										}
 	;
 
 condition:
-	leftOperand operator rightOperand
+	leftOperand operator rightOperand	{
+											$$ = $2;
+											$$->left = $1;
+											$$->right = $3;
+										}
 	;
 
 leftOperand:
-	columnName
+	columnName							{
+											$$ = new struct conditionNode;
+											$$->chval = $1;
+										}
 	;
 
 operator:
-	'<'
-	| '>'
-	| '='
-	| '!''='
-	| '<''>'
+	'<'									{	
+											$$ = new struct conditionNode;
+											$$->op = conditionNode::LESS;
+										}
+	| '>'								{	
+											$$ = new struct conditionNode;
+											$$->op = conditionNode::GREATER;
+										}
+	| '='								{	
+											$$ = new struct conditionNode;
+											$$->op = conditionNode::EQUAL;
+										}
+	| '!''='							{	
+											$$ = new struct conditionNode;
+											$$->op = conditionNode::NOT;
+										}
+	| '<''>'							{	
+											$$ = new struct conditionNode;
+											$$->op = conditionNode::NOT;
+										}
 	;
 
 rightOperand:
-	NUMBER
-	| STRING
+	NUMBER								{
+											$$ = new struct conditionNode;
+											$$->intval = $<intval>1;
+											$$->type = conditionNode::INT;
+										}
+	| STRING							{
+											$$ = new struct conditionNode;
+											$$->chval = $<chval>1;
+											$$->type = conditionNode::STRING;
+										}
 	;
 
 // Insert statement.

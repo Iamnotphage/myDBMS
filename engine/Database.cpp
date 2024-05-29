@@ -287,11 +287,97 @@ void Database::dropTable(const std::string &tableName) {
 }
 
 void Database::createTable(const std::string &tableName, struct columnNode *columnHead) {
+    std::string tablePath = dataPath + "/" + this->currentDatabase + "/" + tableName;
+    if(exists(tablePath) && is_regular_file(tablePath)){
+        std::cout << "Table '" << tableName << "' already exists" << std::endl;
+        return;
+    }
+
+    struct columnNode* head = columnHead;
     std::cout << "Table name: " << tableName << std::endl;
     // create table testCreate (id INT, name CHAR(10), score INT);
+    while(head != nullptr){
+        std::cout << "column name: " << head->columnName << std::endl << "char length: " << head->charLength << std::endl;
+        head = head->next;
+    }
+
+
+
+    // Free the nodes.
+    head = columnHead;
+    while(head != nullptr){
+        columnNode* tmp = head;
+        head = head->next;
+        delete tmp;
+    }
+}
+
+void Database::select(struct selectNode *node) {
+    // TEST DATA: select id,name,test from sys_test,sys_test2 where id = 5 AND name = 'shit';
+    // 遍历列名
+    std::cout << "Traverse Column Names" << std::endl;
+    struct columnNode* columnHead = node->columnNames;
     while(columnHead != nullptr){
-        std::cout << "column name: " << columnHead->columnName << std::endl << "char length: " << columnHead->charLength << std::endl;
+        std::cout << "column name: " << columnHead->columnName << std::endl;
         columnHead = columnHead->next;
+    }
+
+    // 遍历表名
+    std::cout << "Traverse Table Names" << std::endl;
+    struct tableNode* tableHead = node->tables;
+    while(tableHead != nullptr){
+        std::cout << "table name: " << tableHead->tableName << std::endl;
+        tableHead = tableHead->nextTable;
+    }
+
+    // 遍历条件
+    std::cout << "Traverse Conditions" << std::endl;
+    struct conditionNode* conditionHead = node->conditions;
+
+    traverseConditions(conditionHead);
+}
+
+// 递归遍历条件节点
+void Database::traverseConditions(struct conditionNode* node) {
+    if (node == nullptr) {
+        return;
+    }
+    // 处理左子节点
+    if (node->left != nullptr) {
+        traverseConditions(node->left);
+    }
+
+    // 处理当前节点
+    switch (node->op) {
+        case conditionNode::AND:
+            std::cout << "AND" << std::endl;
+            break;
+        case conditionNode::OR:
+            std::cout << "OR" << std::endl;
+            break;
+        case conditionNode::EQUAL:
+            std::cout << "EQUAL" << std::endl;
+            break;
+        case conditionNode::GREATER:
+            std::cout << "GREATER" << std::endl;
+            break;
+        case conditionNode::LESS:
+            std::cout << "LESS" << std::endl;
+            break;
+        case conditionNode::NOT:
+            std::cout << "NOT" << std::endl;
+            break;
+    }
+
+    if (node->type == conditionNode::INT) {
+        std::cout << "INT value: " << node->intval << std::endl;
+    } else if (node->type == conditionNode::STRING) {
+        std::cout << "STRING value: " << node->chval << std::endl;
+    }
+
+    // 处理右子节点
+    if (node->right != nullptr) {
+        traverseConditions(node->right);
     }
 }
 

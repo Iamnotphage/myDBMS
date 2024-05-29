@@ -429,7 +429,7 @@ bison -d test.y
 ```shell
 gcc -o test test.tab.c lex.yy.c
 ```
-这样就能够生成`test.exe`文件了，执行是没问题的。
+这样就能够生成`test.exe`文件了，执行是没问题的。(上述是纯C文件的编译)
 
 ## 模块化
 
@@ -484,7 +484,7 @@ bison -d test.y
 g++ -o lex.yy.c test.tab.c main.cpp
 ```
 
-**但是!** 在我的CLion中，却需要将函数声明加上`extern "C"`才能正确链接。
+在CPP文件中，如果要用到`yyparse()`和`yy_scan_string()`这些来自C文件的函数，就要加上`extern "C"`的关键字。
 
 ```c++
 //很重要
@@ -500,6 +500,10 @@ extern "C"{
 
 要么纯C要么纯CPP，C和CPP混合的话，还是挺麻烦的，除非你能做到完美分离前后端。
 
+如果你要纯CPP的话，`flex`源文件可以在开头加上`%option outfile = "lex.yy.cpp"`，这样`flex lex.l`编译出来的文件就是`lex.yy.cpp`(可改名)
+
+使用`yyparse()`和`yy_scan_string()`的话，就不用加上`extern "C"`的关键字了。
+
 # 数据库设计
 
 ## myDBMS Architecture
@@ -514,3 +518,14 @@ extern "C"{
 
 这一点参考的官方[Architecture of SQLite](https://www.sqlite.org/arch.html)
 
+## 存储结构设计
+
+采取分页的思想，一个文件为一张表，一张表内有若干页，一页内有若干行。
+
+对于每一个页：
+
+* 首先要有一个`File Header`，除了表明页的信息外，还有两个指针，分别指向上一页和下一页。
+* 再来一个`Page Header`，存储一些该页的状态信息。
+* 再设计一个`Infimum + Supermum`，用来记录当前页最小和最大的记录。
+* 接下来设计一个`Page Directory`，对下文的`User Records`做一个简单索引。
+* 最后才是`User Records`用来存储每一行的数据，数据之间物理上按先后顺序存储，逻辑上按主键顺序形成单链表。
