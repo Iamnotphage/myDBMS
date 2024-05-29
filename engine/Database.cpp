@@ -327,7 +327,7 @@ void Database::select(struct selectNode *node) {
     struct tableNode* tableHead = node->tables;
     while(tableHead != nullptr){
         std::cout << "table name: " << tableHead->tableName << std::endl;
-        tableHead = tableHead->nextTable;
+        tableHead = tableHead->next;
     }
 
     // 遍历条件
@@ -378,6 +378,33 @@ void Database::traverseConditions(struct conditionNode* node) {
     // 处理右子节点
     if (node->right != nullptr) {
         traverseConditions(node->right);
+    }
+}
+
+void Database::insert(struct insertNode *node) {
+    // TEST: insert into testTable (id,name,score) values(10,'chen',100);
+    // insert into testTable values(10,'chen',100);
+    // 打印表名
+    std::cout << "Table Name: " << node->tableName << std::endl;
+
+    // 遍历列名
+    std::cout << "Traverse Column Names" << std::endl;
+    struct columnNode* columnHead = node->columnNames;
+    while (columnHead != nullptr) {
+        std::cout << "Column name: " << columnHead->columnName << std::endl;
+        columnHead = columnHead->next;
+    }
+
+    // 遍历值
+    std::cout << "Traverse Values" << std::endl;
+    struct valueNode* valueHead = node->values;
+    while (valueHead != nullptr) {
+        if (valueHead->type == valueNode::INT) {
+            std::cout << "INT value: " << valueHead->intval << std::endl;
+        } else if (valueHead->type == valueNode::STRING) {
+            std::cout << "STRING value: " << valueHead->chval << std::endl;
+        }
+        valueHead = valueHead->next;
     }
 }
 

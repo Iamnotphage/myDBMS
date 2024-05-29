@@ -19,7 +19,7 @@ struct columnNode{
 // for SELECT node;
 struct tableNode{
     std::string tableName;
-    struct tableNode* nextTable;
+    struct tableNode* next;
 };
 
 struct conditionNode{
@@ -41,6 +41,25 @@ struct selectNode{
     struct tableNode* tables = nullptr;
     struct conditionNode* conditions = nullptr;
 };
+
+// for INSERT node;
+struct valueNode{
+    enum type{
+        INT, STRING
+    }type;
+    int intval;
+    std::string chval;
+    struct valueNode* next;
+};
+
+// INSERT INTO [table] ([columnNames]) VALUES ([values]);
+// INSERT INTO [table] VALUES ([values]);
+struct insertNode{
+    std::string tableName;
+    struct columnNode* columnNames = nullptr;
+    struct valueNode* values = nullptr;
+};
+
 
 /**
  * @class Database
@@ -118,6 +137,16 @@ public:
      * @param node the select-node
      */
     void select(struct selectNode* node);
+
+    /**
+     * @brief
+     * INSERT INTO [tableName] ([columnNames]) VALUES ([values]);
+     *
+     * INSERT INTO [tableName] VALUES ([values]);
+     *
+     * @param node
+     */
+    void insert(struct insertNode* node);
 private:
     int currentState;
     const std::string dataPath = "../data";

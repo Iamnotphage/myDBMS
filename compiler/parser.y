@@ -18,14 +18,21 @@
 	struct selectNode* selectHead;
 	struct tableNode* tableHead;
 	struct conditionNode* conditionHead;
+
+	struct valueNode* valueHead;
+	struct insertNode* insertHead;
 }
 
 /* Non-Terminated Symbols */
 %type<chval> databaseName tableName columnName
 %type<columnHead> columnsDefinition columnType columnNames
+
 %type<selectHead> queryStatement
 %type<tableHead> tableNames
 %type<conditionHead> conditions condition operator leftOperand rightOperand
+
+%type<insertHead> insertStatement
+%type<valueHead> values value
 
 /* Terminated Symbols */
 // System-Control Tokens
@@ -206,7 +213,7 @@ tableNames:
 	| tableName ',' tableNames			{
 											$$ = new struct tableNode;
 											$$->tableName = $1;
-											$$->nextTable = $3;
+											$$->next = $3;
 										}
 	;
 
@@ -286,18 +293,46 @@ rightOperand:
 
 // Insert statement.
 insertStatement:
-	INSERT INTO tableName '(' columnNames ')' VALUES '(' values ')' ';'	{printf("[INFO] Identified a strong-insert command.\n");}
-	| INSERT INTO tableName VALUES '(' values ')' ';'					{printf("[INFO] Identified a weak-insert command.\n");}
+	INSERT INTO tableName '(' columnNames ')' VALUES '(' values ')' ';'	
+										{
+											// printf("[INFO] Identified a strong-insert command.\n");
+											$$ = new struct insertNode;
+											$$->tableName = $3;
+											$$->columnNames = $5;
+											$$->values = $9;
+											core.insert($$);
+										}
+	| INSERT INTO tableName VALUES '(' values ')' ';'					
+										{	
+											// printf("[INFO] Identified a weak-insert command.\n");
+											$$ = new struct insertNode;
+											$$->tableName = $3;
+											$$->values = $6;
+											core.insert($$);
+										}
 	;
 
 values:
-	value
-	| value ',' values
+	value								{
+											$$ = $1;
+										}
+	| value ',' values					{
+											$$ = $1;
+											$$->next = $3;
+										}
 	;
 
 value:
-	NUMBER
-	| STRING
+	NUMBER								{
+											$$ = new struct valueNode;
+											$$->type = valueNode::INT;
+											$$->intval = $<intval>1;
+										}
+	| STRING							{
+											$$ = new struct valueNode;
+											$$->type = valueNode::STRING;
+											$$->chval = $<chval>1;
+										}
 	;
 
 // Update statement.
