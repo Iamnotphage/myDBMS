@@ -24,6 +24,8 @@
 
 	struct assignmentNode* assignmentHead;
 	struct updateNode* updateHead;
+
+	struct deleteNode* deleteHead;
 }
 
 /* Non-Terminated Symbols */
@@ -39,6 +41,8 @@
 
 %type<updateHead> updateStatement
 %type<assignmentHead> assignment assignments
+
+%type<deleteHead> deleteStatement
 
 /* Terminated Symbols */
 // System-Control Tokens
@@ -134,24 +138,26 @@ tableName:
 
 // Create Statement.
 createStatement:
-	CREATE TABLE tableName '('columnsDefinition')' ';'	{
-															// printf("[INFO] This is a create-table command.\n");
-															core.createTable($3, $5);
-														}
+	CREATE TABLE tableName '('columnsDefinition')' ';'	
+										{
+											// printf("[INFO] This is a create-table command.\n");
+											core.createTable($3, $5);
+										}
 	;
 
 columnsDefinition:
-	columnName columnType								{	
-															// printf("[INFO] Identified a single-column definition.\n");
-															$$ = $2;
-															$$->columnName = $1;
-														}
-	| columnName columnType ',' columnsDefinition		{	
-															//printf("[INFO] Identified a multi-columns definitions.\n");
-															$2->columnName = $1;
-															$2->next = $4;
-															$$ = $2;
-														}
+	columnName columnType				{	
+											// printf("[INFO] Identified a single-column definition.\n");
+											$$ = $2;
+											$$->columnName = $1;
+										}
+	| columnName columnType ',' columnsDefinition		
+										{	
+											//printf("[INFO] Identified a multi-columns definitions.\n");
+											$2->columnName = $1;
+											$2->next = $4;
+											$$ = $2;
+										}
 	;
 
 columnName:
@@ -177,22 +183,23 @@ columnType:
 
 // Query Statement.
 queryStatement:
-	SELECT columnNames FROM tableNames ';'				{
-															// printf("[INFO] Identified a select command.\n");
-															$$ = new struct selectNode;
-															$$->columnNames = $2;
-															$$->tables = $4;
-															core.select($$);
-														}
+	SELECT columnNames FROM tableNames ';'				
+										{
+											// printf("[INFO] Identified a select command.\n");
+											$$ = new struct selectNode;
+											$$->columnNames = $2;
+											$$->tables = $4;
+											core.select($$);
+										}
 	| SELECT columnNames FROM tableNames WHERE conditions ';'	
-														{	
-															// printf("[INFO] Identified a select with conditions command.\n");
-															$$ = new struct selectNode;
-															$$->columnNames = $2;
-															$$->tables = $4;
-															$$->conditions = $6;
-															core.select($$);
-														}
+										{	
+											// printf("[INFO] Identified a select with conditions command.\n");
+											$$ = new struct selectNode;
+											$$->columnNames = $2;
+											$$->tables = $4;
+											$$->conditions = $6;
+											core.select($$);
+										}
 	;
 
 columnNames:
@@ -225,15 +232,20 @@ tableNames:
 
 // Top-level conditions rules
 conditions:
-    condition
-    | condition AND conditions         {
+    condition							{
+											$$ = $1;
+										}
+	| '(' conditions ')'                {
+                                            $$ = $2;
+                                        }
+    | conditions AND conditions         {
                                             $$ = new conditionNode;
                                             $$->left = $1;
                                             $$->right = $3;
                                             $$->op = conditionNode::AND;
                                             $$->type = conditionNode::LOGIC;
                                         }
-    | condition OR conditions           {
+    | conditions OR conditions          {
                                             $$ = new conditionNode;
                                             $$->left = $1;
                                             $$->right = $3;
@@ -250,9 +262,6 @@ condition:
                                             $$->right = $3;
                                             $$->op = $2->op;
                                             $$->type = conditionNode::LOGIC;
-                                        }
-	| '(' condition ')'                 {
-                                            $$ = $2;
                                         }
     ;
 
@@ -360,7 +369,7 @@ updateStatement:
 											$$->tableName = $2;
 											$$->assignments = $4;
 											$$->conditions = $6;
-											// core.update($$);
+											core.update($$);
 										}
 	;
 
@@ -393,8 +402,20 @@ assignment:
 
 // Delete statement.
 deleteStatement:
-	DELETE FROM tableName ';'	{printf("[INFO] Identified a whole-table delete command.\n");}
-	| DELETE FROM tableName WHERE conditions ';'	{printf("[INFO] Identified a delete command.\n");}
+	DELETE FROM tableName ';'			{	
+											// printf("[INFO] Identified a whole-table delete command.\n");
+											$$ = new struct deleteNode;
+											$$->tableName = $3;
+											core.deleteFrom($$);
+										}
+	| DELETE FROM tableName WHERE conditions ';'	
+										{	
+											// printf("[INFO] Identified a delete command.\n");
+											$$ = new struct deleteNode;
+											$$->tableName = $3;
+											$$->conditions = $5;
+											core.deleteFrom($$);
+										}
 	;
 %%
 
