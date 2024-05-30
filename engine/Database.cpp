@@ -315,6 +315,7 @@ void Database::createTable(const std::string &tableName, struct columnNode *colu
 void Database::select(struct selectNode *node) {
     // TEST DATA: select id,name,test from sys_test,sys_test2 where id = 5 AND name = 'shit';
     // SELECT id FROM testTable WHERE money='99';
+    // select id,name,test from sys_test,sys_test2 where (id = 5 AND name = 'shit') OR (dsaf=3);
     // 遍历列名
     std::cout << "Traverse Column Names" << std::endl;
     struct columnNode* columnHead = node->columnNames;
@@ -335,7 +336,7 @@ void Database::select(struct selectNode *node) {
     std::cout << "Traverse Conditions" << std::endl;
     struct conditionNode* conditionHead = node->conditions;
 
-    traverseConditions(conditionHead);
+    // traverseConditions(conditionHead);
 }
 
 // 递归遍历条件节点
@@ -440,5 +441,16 @@ void Database::update(struct updateNode *node) { // 应该是assignment有问题
     // 遍历条件
     std::cout << "Traverse Conditions" << std::endl;
     traverseConditions(node->conditions);
+}
+
+void Database::deleteFrom(struct deleteNode *node) {
+    // TEST: DELETE FROM STUDENT WHERE (SAGE>21) AND (SSEX=0);
+    // print tableName
+    std::cout << "Table Name: " << node->tableName << std::endl;
+
+    struct conditionNode* conditionHead = node->conditions;
+    if(conditionHead != nullptr){
+        traverseConditions(conditionHead);
+    }
 }
 

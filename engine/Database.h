@@ -78,6 +78,13 @@ struct updateNode{
     struct conditionNode* conditions = nullptr;
 };
 
+// DELETE FROM [tableName];
+// DELETE FROM [tableName] WHERE [conditions];
+struct deleteNode{
+    std::string tableName;
+    struct conditionNode* conditions = nullptr;
+};
+
 /**
  * @class Database
  * @brief A class to manage and execute SQL command.
@@ -171,6 +178,15 @@ public:
      * @param node the update-node
      */
     void update(struct updateNode* node);
+
+    /**
+     * @brief
+     * DELETE FROM [tableName];
+     * DELETE FROM [tableName] WHERE [conditions];
+     *
+     * @param node the delete-node
+     */
+    void deleteFrom(struct deleteNode* node);
 private:
     int currentState;
     const std::string dataPath = "../data";
