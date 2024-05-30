@@ -21,6 +21,9 @@
 
 	struct valueNode* valueHead;
 	struct insertNode* insertHead;
+
+	struct assignmentNode* assignmentHead;
+	struct updateNode* updateHead;
 }
 
 /* Non-Terminated Symbols */
@@ -33,6 +36,9 @@
 
 %type<insertHead> insertStatement
 %type<valueHead> values value
+
+%type<updateHead> updateStatement
+%type<assignmentHead> assignment assignments
 
 /* Terminated Symbols */
 // System-Control Tokens
@@ -217,79 +223,87 @@ tableNames:
 										}
 	;
 
+// Top-level conditions rules
 conditions:
-	condition							{	
-											$$ = $1;	
-										}
-	| '(' conditions ')'				{	
-											$$ = $2;
-										}
-	| conditions AND conditions			{	
-											$$ = new struct conditionNode;
-											$$->left = $1;
-											$$->right = $3;
-											$$->op = conditionNode::AND;
-											$$->type = conditionNode::LOGIC;
-										}
-	| conditions OR conditions			{
-											$$ = new struct conditionNode;
-											$$->left = $1;
-											$$->right = $3;
-											$$->op = conditionNode::OR;
-											$$->type = conditionNode::LOGIC;
-										}
-	;
+    condition
+    | condition AND conditions         {
+                                            $$ = new conditionNode;
+                                            $$->left = $1;
+                                            $$->right = $3;
+                                            $$->op = conditionNode::AND;
+                                            $$->type = conditionNode::LOGIC;
+                                        }
+    | condition OR conditions           {
+                                            $$ = new conditionNode;
+                                            $$->left = $1;
+                                            $$->right = $3;
+                                            $$->op = conditionNode::OR;
+                                            $$->type = conditionNode::LOGIC;
+                                        }
+    ;
 
+// Single condition rule
 condition:
-	leftOperand operator rightOperand	{
-											$$ = $2;
-											$$->left = $1;
-											$$->right = $3;
-										}
-	;
+    leftOperand operator rightOperand   {
+                                            $$ = new conditionNode;
+                                            $$->left = $1;
+                                            $$->right = $3;
+                                            $$->op = $2->op;
+                                            $$->type = conditionNode::LOGIC;
+                                        }
+	| '(' condition ')'                 {
+                                            $$ = $2;
+                                        }
+    ;
 
+// Left operand can be a column name
 leftOperand:
-	columnName							{
-											$$ = new struct conditionNode;
-											$$->chval = $1;
-										}
-	;
+    columnName                          {
+                                            $$ = new conditionNode;
+                                            $$->chval = $1;
+                                            $$->type = conditionNode::STRING; // Assuming column names are strings
+                                        }
+    ;
 
+// Operator definitions
 operator:
-	'<'									{	
-											$$ = new struct conditionNode;
-											$$->op = conditionNode::LESS;
-										}
-	| '>'								{	
-											$$ = new struct conditionNode;
-											$$->op = conditionNode::GREATER;
-										}
-	| '='								{	
-											$$ = new struct conditionNode;
-											$$->op = conditionNode::EQUAL;
-										}
-	| '!''='							{	
-											$$ = new struct conditionNode;
-											$$->op = conditionNode::NOT;
-										}
-	| '<''>'							{	
-											$$ = new struct conditionNode;
-											$$->op = conditionNode::NOT;
-										}
-	;
+    '<'                                 {
+                                            $$ = new conditionNode;
+                                            $$->op = conditionNode::LESS;
+                                        }
+    | '>'                               {
+                                            $$ = new conditionNode;
+                                            $$->op = conditionNode::GREATER;
+                                        }
+    | '='                               {
+                                            $$ = new conditionNode;
+                                            $$->op = conditionNode::EQUAL;
+                                        }
+    | '!' '='                           {
+                                            $$ = new conditionNode;
+                                            $$->op = conditionNode::NOT;
+                                        }
+    | '<' '>'                           {
+                                            $$ = new conditionNode;
+                                            $$->op = conditionNode::NOT;
+                                        }
+    ;
 
+// Right operand can be a number or a string
 rightOperand:
-	NUMBER								{
-											$$ = new struct conditionNode;
-											$$->intval = $<intval>1;
-											$$->type = conditionNode::INT;
-										}
-	| STRING							{
-											$$ = new struct conditionNode;
-											$$->chval = $<chval>1;
-											$$->type = conditionNode::STRING;
-										}
-	;
+    NUMBER                              {
+                                            printf("[INFO] A NUMBER.\n");
+                                            $$ = new conditionNode;
+                                            $$->intval = $<intval>1;
+                                            $$->type = conditionNode::INT;
+                                        }
+    | STRING                            {
+                                            printf("[INFO] A STRING.\n");
+                                            $$ = new conditionNode;
+                                            $$->chval = $<chval>1;
+                                            $$->type = conditionNode::STRING;
+                                        }
+    ;
 
 // Insert statement.
 insertStatement:
@@ -324,11 +338,13 @@ values:
 
 value:
 	NUMBER								{
+											printf("[INFO] Identified value NUMBER.\n");
 											$$ = new struct valueNode;
 											$$->type = valueNode::INT;
 											$$->intval = $<intval>1;
 										}
 	| STRING							{
+											printf("[INFO] Identified value STRING.\n");
 											$$ = new struct valueNode;
 											$$->type = valueNode::STRING;
 											$$->chval = $<chval>1;
@@ -337,16 +353,42 @@ value:
 
 // Update statement.
 updateStatement:
-	UPDATE tableName SET assignments WHERE conditions ';'	{printf("[INFO] Identified a update command.\n");}
+	UPDATE tableName SET assignments WHERE conditions ';'
+										{	
+											printf("[INFO] Identified a update command.\n");
+											$$ = new struct updateNode;
+											$$->tableName = $2;
+											$$->assignments = $4;
+											$$->conditions = $6;
+											// core.update($$);
+										}
 	;
 
 assignments:
-	assignment
-	| assignment ',' assignments
+	assignment							{
+											printf("[INFO] Identified a assignment.\n");
+											$$ = $1;
+										}
+	| assignment ',' assignments		{
+											printf("[INFO] Identified a assignments.\n");
+											$$ = $1;
+											$$->next = $3;
+										}
 	;
 
 assignment:
-	columnName '=' value
+	columnName '=' value				{
+											printf("[INFO] Identified a assignments [a=b].\n");
+											$$ = new struct assignmentNode;
+											$$->columnName = $1;
+											if($3->type == valueNode::INT){
+												$$->type = assignmentNode::INT;
+												$$->intval = $3->intval;
+											}else if($3->type == valueNode::STRING){
+												$$->type = assignmentNode::STRING;
+												$$->chval = $3->chval;
+											}
+										}
 	;
 
 // Delete statement.

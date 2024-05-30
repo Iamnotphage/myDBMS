@@ -42,7 +42,7 @@ INT         int|INT
 /* Identifiers and Literals */
 ID          [a-zA-Z][a-zA-Z_0-9]*
 NUMBER      [-+]?[0-9]+
-STRING      '.*'
+STRING      "'"[^']*"'"
 
 %%
 
