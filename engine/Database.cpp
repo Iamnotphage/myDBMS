@@ -314,6 +314,7 @@ void Database::createTable(const std::string &tableName, struct columnNode *colu
 
 void Database::select(struct selectNode *node) {
     // TEST DATA: select id,name,test from sys_test,sys_test2 where id = 5 AND name = 'shit';
+    // SELECT id FROM testTable WHERE money='99';
     // 遍历列名
     std::cout << "Traverse Column Names" << std::endl;
     struct columnNode* columnHead = node->columnNames;
@@ -342,37 +343,45 @@ void Database::traverseConditions(struct conditionNode* node) {
     if (node == nullptr) {
         return;
     }
+
     // 处理左子节点
     if (node->left != nullptr) {
         traverseConditions(node->left);
     }
 
     // 处理当前节点
-    switch (node->op) {
-        case conditionNode::AND:
-            std::cout << "AND" << std::endl;
-            break;
-        case conditionNode::OR:
-            std::cout << "OR" << std::endl;
-            break;
-        case conditionNode::EQUAL:
-            std::cout << "EQUAL" << std::endl;
-            break;
-        case conditionNode::GREATER:
-            std::cout << "GREATER" << std::endl;
-            break;
-        case conditionNode::LESS:
-            std::cout << "LESS" << std::endl;
-            break;
-        case conditionNode::NOT:
-            std::cout << "NOT" << std::endl;
-            break;
-    }
+    if (node->op == conditionNode::AND || node->op == conditionNode::OR) {
+        // 如果当前节点是 AND 或 OR，则只输出一次
+        if (node->left->op != node->op) {
+            if (node->op == conditionNode::AND) {
+                std::cout << "AND" << std::endl;
+            } else if (node->op == conditionNode::OR) {
+                std::cout << "OR" << std::endl;
+            }
+        }
+    } else {
+        // 当前节点不是 AND 或 OR，则输出操作符
+        switch (node->op) {
+            case conditionNode::EQUAL:
+                std::cout << "EQUAL" << std::endl;
+                break;
+            case conditionNode::GREATER:
+                std::cout << "GREATER" << std::endl;
+                break;
+            case conditionNode::LESS:
+                std::cout << "LESS" << std::endl;
+                break;
+            case conditionNode::NOT:
+                std::cout << "NOT" << std::endl;
+                break;
+        }
 
-    if (node->type == conditionNode::INT) {
-        std::cout << "INT value: " << node->intval << std::endl;
-    } else if (node->type == conditionNode::STRING) {
-        std::cout << "STRING value: " << node->chval << std::endl;
+        // 输出节点的值
+        if (node->type == conditionNode::INT) {
+            std::cout << "INT value: " << node->intval << std::endl;
+        } else if (node->type == conditionNode::STRING) {
+            std::cout << "STRING value: " << node->chval << std::endl;
+        }
     }
 
     // 处理右子节点
@@ -406,5 +415,30 @@ void Database::insert(struct insertNode *node) {
         }
         valueHead = valueHead->next;
     }
+}
+
+void Database::update(struct updateNode *node) { // 应该是assignment有问题
+    // TEST: UPDATE testTable SET id=3,name='chen',score=100 WHERE money='infinity';
+    // UPDATE testTable SET id=3,score=100 WHERE money='1';
+    // UPDATE testTable SET id=3,score='100' WHERE money='1' AND id = 3 AND id = '4';
+    // 打印表名
+    std::cout << "Table Name: " << node->tableName << std::endl;
+
+    // 遍历赋值
+    std::cout << "Traverse Assignments" << std::endl;
+    struct assignmentNode* assignmentHead = node->assignments;
+    while (assignmentHead != nullptr) {
+        std::cout << "Column name: " << assignmentHead->columnName << std::endl;
+        if (assignmentHead->type == assignmentNode::INT) {
+            std::cout << "INT value: " << assignmentHead->intval << std::endl;
+        } else if (assignmentHead->type == assignmentNode::STRING) {
+            std::cout << "STRING value: " << assignmentHead->chval << std::endl;
+        }
+        assignmentHead = assignmentHead->next;
+    }
+
+    // 遍历条件
+    std::cout << "Traverse Conditions" << std::endl;
+    traverseConditions(node->conditions);
 }
 

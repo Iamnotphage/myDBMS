@@ -19,7 +19,7 @@ struct columnNode{
 // for SELECT node;
 struct tableNode{
     std::string tableName;
-    struct tableNode* next;
+    struct tableNode* next = nullptr;
 };
 
 struct conditionNode{
@@ -30,7 +30,7 @@ struct conditionNode{
     struct conditionNode* right = nullptr;
     enum type {
         INT, STRING, LOGIC
-    }type;
+    }type; // 如果type是LOGIC表明是一个递归的condition定义
     int intval;
     std::string chval;
 };
@@ -49,7 +49,7 @@ struct valueNode{
     }type;
     int intval;
     std::string chval;
-    struct valueNode* next;
+    struct valueNode* next = nullptr;
 };
 
 // INSERT INTO [table] ([columnNames]) VALUES ([values]);
@@ -60,6 +60,23 @@ struct insertNode{
     struct valueNode* values = nullptr;
 };
 
+// for UPDATE node;
+struct assignmentNode{
+    std::string columnName;
+    enum type{
+        INT, STRING
+    }type;
+    int intval;
+    std::string chval;
+    struct assignmentNode* next = nullptr;
+};
+
+// UPDATE [tableName] SET [assignments] WHERE [conditions];
+struct updateNode{
+    std::string tableName;
+    struct assignmentNode* assignments = nullptr;
+    struct conditionNode* conditions = nullptr;
+};
 
 /**
  * @class Database
@@ -144,9 +161,16 @@ public:
      *
      * INSERT INTO [tableName] VALUES ([values]);
      *
-     * @param node
+     * @param node the insert-node
      */
     void insert(struct insertNode* node);
+
+    /**
+     * @brief UPDATE [tableName] SET [assignments] WHERE [conditions];
+     *
+     * @param node the update-node
+     */
+    void update(struct updateNode* node);
 private:
     int currentState;
     const std::string dataPath = "../data";
