@@ -34,7 +34,7 @@
 
 %type<selectHead> queryStatement
 %type<tableHead> tableNames
-%type<conditionHead> conditions condition operator leftOperand rightOperand
+%type<conditionHead> conditions condition operator rightOperand
 
 %type<insertHead> insertStatement
 %type<valueHead> values value
@@ -239,62 +239,57 @@ conditions:
                                             $$ = $2;
                                         }
     | conditions AND conditions         {
-                                            $$ = new conditionNode;
-                                            $$->left = $1;
-                                            $$->right = $3;
-                                            $$->op = conditionNode::AND;
-                                            $$->type = conditionNode::LOGIC;
+                                            $$ = new struct conditionNode;
+											$$->op = conditionNode::AND;
+											$$->left = $1;
+											$$->right = $3;
                                         }
     | conditions OR conditions          {
-                                            $$ = new conditionNode;
-                                            $$->left = $1;
-                                            $$->right = $3;
-                                            $$->op = conditionNode::OR;
-                                            $$->type = conditionNode::LOGIC;
+                                            $$ = new struct conditionNode;
+											$$->op = conditionNode::OR;
+											$$->left = $1;
+											$$->right = $3;
                                         }
     ;
 
 // Single condition rule
 condition:
-    leftOperand operator rightOperand   {
-                                            $$ = new conditionNode;
-                                            $$->left = $1;
-                                            $$->right = $3;
-                                            $$->op = $2->op;
-                                            $$->type = conditionNode::LOGIC;
-                                        }
-    ;
+    columnName operator rightOperand   {
+                                            $$ = new struct conditionNode;
+                                            $$->columnName = $1;
+											$$->op = $2->op;
+											$$->rightOperandType = $3->rightOperandType;
 
-// Left operand can be a column name
-leftOperand:
-    columnName                          {
-                                            $$ = new conditionNode;
-                                            $$->chval = $1;
-                                            $$->type = conditionNode::STRING; // Assuming column names are strings
+											if($$->rightOperandType == conditionNode::INT){
+												$$->intval = $3->intval;
+											}else if($$->rightOperandType == conditionNode::STRING){
+												$$->chval = $3->chval;
+											}
                                         }
     ;
 
 // Operator definitions
 operator:
     '<'                                 {
-                                            $$ = new conditionNode;
+											// 新建结点只是为了传递值
+											$$ = new struct conditionNode;
                                             $$->op = conditionNode::LESS;
                                         }
     | '>'                               {
-                                            $$ = new conditionNode;
+											$$ = new struct conditionNode;
                                             $$->op = conditionNode::GREATER;
                                         }
     | '='                               {
-                                            $$ = new conditionNode;
+											$$ = new struct conditionNode;
                                             $$->op = conditionNode::EQUAL;
                                         }
     | '!' '='                           {
-                                            $$ = new conditionNode;
-                                            $$->op = conditionNode::NOT;
+											$$ = new struct conditionNode;
+                                            $$->op = conditionNode::NOT_EQUAL;
                                         }
     | '<' '>'                           {
-                                            $$ = new conditionNode;
-                                            $$->op = conditionNode::NOT;
+											$$ = new struct conditionNode;
+                                            $$->op = conditionNode::NOT_EQUAL;
                                         }
     ;
 
@@ -302,15 +297,16 @@ operator:
 rightOperand:
     NUMBER                              {
                                             printf("[INFO] A NUMBER.\n");
-                                            $$ = new conditionNode;
-                                            $$->intval = $<intval>1;
-                                            $$->type = conditionNode::INT;
+											// 新建结点只是为了传递值
+											$$ = new struct conditionNode;
+                                            $$->rightOperandType = conditionNode::INT;
+											$$->intval = $<intval>1;
                                         }
     | STRING                            {
                                             printf("[INFO] A STRING.\n");
-                                            $$ = new conditionNode;
-                                            $$->chval = $<chval>1;
-                                            $$->type = conditionNode::STRING;
+                                            $$ = new struct conditionNode;
+                                            $$->rightOperandType = conditionNode::STRING;
+											$$->chval = $<chval>1;
                                         }
     ;
 

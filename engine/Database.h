@@ -23,16 +23,20 @@ struct tableNode{
 };
 
 struct conditionNode{
-    struct conditionNode* left = nullptr;
-    enum op {
-        AND, OR, EQUAL, GREATER, LESS, NOT
+    std::string columnName;
+    // 如果op是AND或者OR，说明是一个中间结点，有左右子树，cloumnName和value为空。
+    // 如果这个结点是叶子节点，则代表这是一个表达式结点，columnName op value;
+    enum op{
+        AND, OR, GREATER, LESS, EQUAL, NOT_EQUAL
     }op;
-    struct conditionNode* right = nullptr;
-    enum type {
-        INT, STRING, LOGIC
-    }type; // 如果type是LOGIC表明是一个递归的condition定义
+    enum rightOperandType{
+        INT, STRING
+    }rightOperandType;
     int intval;
     std::string chval;
+
+    struct conditionNode* left = nullptr;
+    struct conditionNode* right = nullptr;
 };
 
 // SELECT [columnNames] FROM [tables] WHERE [conditions];
