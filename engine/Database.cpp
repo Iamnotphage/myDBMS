@@ -113,6 +113,7 @@ void Database::useDatabase(const std::string& databaseName) {
         if (entry.is_regular_file()) {
             std::string tableFileName = entry.path().filename().string();
             std::string tableName = tableFileName.substr(0, tableFileName.find_last_of('.'));
+            // std::cout << "----" << entry.path().string() << std::endl;
             tableFiles[tableName] = entry.path().string();
         }
     }
@@ -392,8 +393,6 @@ void Database::select(struct selectNode *node) {
     columnNode* columnHead = node->columnNames;
     tableHead = node->tables;
 
-
-
     if (columnHead->columnName == "*") {
         // Select all columns except 'id'
         Pager pager(tableFiles[tableHead->tableName]);
@@ -419,29 +418,27 @@ void Database::select(struct selectNode *node) {
             columnHead = columnHead->next;
         }
     }
-    // Reverse the order of columnsToSelect
-    // std::reverse(columnsToSelect.begin(), columnsToSelect.end());
-
-    //    std::cout << "===================" << std::endl;
-    //    for(const auto& s : columnsToSelect){
-    //        std::cout << s << std::endl;
-    //    }
-    //    std::cout << "===================" << std::endl;
 
     // Step 4: Retrieve records and apply conditions
     tableHead = node->tables;
     while (tableHead != nullptr) {
         std::string tablePath = tableFiles[tableHead->tableName];
         Pager pager(tablePath);
-        Pager* page = pager.readPage(0);
+
+//        std::cout << "currentPage->path : " << this->currentPage->path << std::endl;
+//        std::cout << "tableName: " << tableHead->tableName << std::endl;
+//        std::cout << "tableName: " << this->dataPath << std::endl;
+        Pager* page = (this->currentPage && this->currentPage->path == this->dataPath + "/" + this->currentDatabase + "\\" + tableHead->tableName + ".txt")
+                      ? this->currentPage
+                      : pager.readPage(0);
 
         while (page) {
             for (const Record& record : page->records) {
                 if (evaluateCondition(record, node->conditions, page->fileHeader.columnOffset)) {
                     // Print the selected columns
-                    if(node->columnNames->columnName == "*"){
+                    if (node->columnNames->columnName == "*") {
                         std::cout << record.data;
-                    }else{
+                    } else {
                         // Print the selected columns
                         std::istringstream dataStream(record.data);
                         std::string value;
@@ -450,7 +447,6 @@ void Database::select(struct selectNode *node) {
                         // Fill values vector with data from record
                         while (std::getline(dataStream, value, ',')) {
                             values.push_back(value);
-                            // std::cout << value << std::endl;
                         }
 
                         bool firstColumn = true;
@@ -467,8 +463,8 @@ void Database::select(struct selectNode *node) {
                 }
             }
 
-            // Move to the next page if exists
-            if (page->fileHeader.nextPage != -1) {
+            // Move to the next page if exists and not the current page
+            if (page->fileHeader.nextPage != -1 && page != this->currentPage) {
                 page = pager.readPage(page->fileHeader.nextPage);
             } else {
                 break;
