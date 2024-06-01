@@ -23,6 +23,8 @@ add_executable(myDBMS
         ${SHELL_DIR}/shell.cpp
         ${ENGINE_DIR}/Database.h
         ${ENGINE_DIR}/Database.cpp
+        ${ENGINE_DIR}/Pager.h
+        ${ENGINE_DIR}/Pager.cpp
         main.cpp
         )
 

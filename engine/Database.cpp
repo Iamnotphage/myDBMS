@@ -3,9 +3,11 @@
 //
 
 #include "Database.h"
+#include "Pager.h"
 #include <iostream>
 #include <filesystem>
 #include <set>
+#include <fstream>
 
 using namespace std::filesystem;
 
@@ -101,6 +103,17 @@ void Database::useDatabase(const std::string& databaseName) {
 
     this->currentDatabase = databaseName;
     this->currentState = STATE_DB;
+    this->tableFiles.clear();
+
+    std::string databasePath = this->dataPath + "/" + this->currentDatabase;
+
+    for (const auto& entry : std::filesystem::directory_iterator(databasePath)) {
+        if (entry.is_regular_file()) {
+            std::string tableFileName = entry.path().filename().string();
+            std::string tableName = tableFileName.substr(0, tableFileName.find_last_of('.'));
+            tableFiles[tableName] = entry.path().string();
+        }
+    }
 
     std::cout << "Database changed" << std::endl;
 }
@@ -287,29 +300,54 @@ void Database::dropTable(const std::string &tableName) {
 }
 
 void Database::createTable(const std::string &tableName, struct columnNode *columnHead) {
-    std::string tablePath = dataPath + "/" + this->currentDatabase + "/" + tableName;
-    if(exists(tablePath) && is_regular_file(tablePath)){
+    // Construct the table file path
+    std::string tablePath = dataPath + "/" + this->currentDatabase + "/" + tableName + ".txt";
+    if(this->currentState == STATE_SYS) {
+        std::cout << "[INFO] No database selected" << std::endl;
+        return;
+    }
+
+    // Check if table already exists
+    if (exists(tablePath) && is_regular_file(tablePath)) {
         std::cout << "Table '" << tableName << "' already exists" << std::endl;
         return;
     }
 
-    struct columnNode* head = columnHead;
-    std::cout << "Table name: " << tableName << std::endl;
-    // create table testCreate (id INT, name CHAR(10), score INT);
-    while(head != nullptr){
-        std::cout << "column name: " << head->columnName << std::endl << "char length: " << head->charLength << std::endl;
-        head = head->next;
+
+    // Create the table file
+    std::ofstream tableFile(tablePath);
+    if (!tableFile) {
+        std::cerr << "Failed to create table file: " << tablePath << std::endl;
+        return;
     }
 
+    // Write FileHeader (metadata)
+    tableFile << "PageNumber:0\n";
+    tableFile << "prevPage:-1\n";
+    tableFile << "nextPage:1\n";
+    tableFile << "Columns:";
 
-
-    // Free the nodes.
-    head = columnHead;
-    while(head != nullptr){
-        columnNode* tmp = head;
-        head = head->next;
-        delete tmp;
+    // Write columns with offsets
+    columnNode* currentColumn = columnHead;
+    int offset = 0;
+    while (currentColumn) {
+        tableFile << currentColumn->columnName << ":" << offset;
+        currentColumn = currentColumn->next;
+        if (currentColumn) tableFile << ",";
+        ++offset;
     }
+    tableFile << "\n";
+
+    // Write PageHeader
+    tableFile << "recordsCount:0\n";
+    tableFile << "Infimum:" << 99999 << "\n";
+    tableFile << "Supermum:" << -1 << "\n";
+
+    // Write an empty page directory
+    tableFile << "PageDirectory: \n";
+
+    tableFile.close();
+    std::cout << "Table '" << tableName << "' created successfully" << std::endl;
 }
 
 void Database::select(struct selectNode *node) {
@@ -320,26 +358,194 @@ void Database::select(struct selectNode *node) {
     // SELECT * FROM STUDENT,COURSE WHERE ((SSEX=0) AND (CID=1)) OR id = 3;
     // SELECT * FROM STUDENT,COURSE WHERE a=0 AND b=1 OR c=2 AND d=3 OR e=4 AND f=6 OR g=7 AND h=8;
     // 遍历列名
-    std::cout << "Traverse Column Names" << std::endl;
-    struct columnNode* columnHead = node->columnNames;
-    while(columnHead != nullptr){
-        std::cout << "column name: " << columnHead->columnName << std::endl;
-        columnHead = columnHead->next;
+    /**
+     * select 要做的事情
+     * 1. 检查当前系统状态是否为 STATE_DB
+     * 2. 检查表名是否存在
+     * 3. 检查列名是否存在/或者是*表示列全选
+     * 4. 检查条件结点的列名是否存在
+     * 5. 从表名对应的文件读取一个页
+     * 6. 如果有条件有主键，该页的最小和最大记录是否符合，不符合则再读下一个页
+     * 7. 如果条件没有主键，遍历每一行记录，存到结果中
+     * 8. 输出结果
+     */
+    // Step 1: Check current system state
+    if (this->currentState != STATE_DB) {
+        std::cerr << "[INFO] No database selected" << std::endl;
+        return;
     }
 
-    // 遍历表名
-    std::cout << "Traverse Table Names" << std::endl;
-    struct tableNode* tableHead = node->tables;
-    while(tableHead != nullptr){
-        std::cout << "table name: " << tableHead->tableName << std::endl;
+    // Step 2: Check if table names exist
+    tableNode* tableHead = node->tables;
+    while (tableHead != nullptr) {
+        if (!tableExists(tableHead->tableName)) {
+            std::cerr << "Table '" << tableHead->tableName << "' does not exist" << std::endl;
+            return;
+        }
         tableHead = tableHead->next;
     }
 
-    // 遍历条件
-    std::cout << "Traverse Conditions" << std::endl;
-    struct conditionNode* conditionHead = node->conditions;
+    // Step 3: Determine columns to select
+    std::vector<std::string> columnsToSelect;
+    columnNode* columnHead = node->columnNames;
+    tableHead = node->tables;
 
-    traverseConditions(conditionHead);
+
+
+    if (columnHead->columnName == "*") {
+        // Select all columns except 'id'
+        Pager pager(tableFiles[tableHead->tableName]);
+        Pager* page = pager.readPage(0);
+
+        for (const auto& column : page->fileHeader.columnOffset) {
+            if (column.first != "id") {
+                columnsToSelect.push_back(column.first);
+            }
+        }
+    } else {
+        // Select specified columns
+        while (columnHead != nullptr && tableHead != nullptr) {
+            if (columnHead->columnName != "*") {
+                if (!columnExists(tableHead->tableName, columnHead->columnName)) {
+                    std::cerr << "Column '" << columnHead->columnName << "' does not exist in table '" << tableHead->tableName << "'" << std::endl;
+                    return;
+                }
+                if (columnHead->columnName != "id") {
+                    columnsToSelect.push_back(columnHead->columnName);
+                }
+            }
+            columnHead = columnHead->next;
+        }
+    }
+    // Reverse the order of columnsToSelect
+    // std::reverse(columnsToSelect.begin(), columnsToSelect.end());
+
+    std::cout << "===================" << std::endl;
+    for(const auto& s : columnsToSelect){
+        std::cout << s << std::endl;
+    }
+    std::cout << "===================" << std::endl;
+
+    // Step 4: Retrieve records and apply conditions
+    tableHead = node->tables;
+    while (tableHead != nullptr) {
+        std::string tablePath = tableFiles[tableHead->tableName];
+        Pager pager(tablePath);
+        Pager* page = pager.readPage(0);
+
+        while (page) {
+            for (const Record& record : page->records) {
+                if (evaluateCondition(record, node->conditions, page->fileHeader.columnOffset)) {
+                    // Print the selected columns
+                    if(node->columnNames->columnName == "*"){
+                        std::cout << record.data;
+                    }else{
+                        // Print the selected columns
+                        std::istringstream dataStream(record.data);
+                        std::string value;
+                        std::vector<std::string> values;
+
+                        // Fill values vector with data from record
+                        while (std::getline(dataStream, value, ',')) {
+                            values.push_back(value);
+                            // std::cout << value << std::endl;
+                        }
+
+                        bool firstColumn = true;
+                        for (const auto& columnName : columnsToSelect) {
+                            int offset = page->fileHeader.columnOffset[columnName] - 1;
+                            if (!firstColumn) {
+                                std::cout << ",";
+                            }
+                            std::cout << values[offset];
+                            firstColumn = false;
+                        }
+                    }
+                    std::cout << std::endl;
+                }
+            }
+
+            // Move to the next page if exists
+            if (page->fileHeader.nextPage != -1) {
+                page = pager.readPage(page->fileHeader.nextPage);
+            } else {
+                break;
+            }
+        }
+
+        tableHead = tableHead->next;
+    }
+}
+
+bool Database::tableExists(const std::string& tableName) {
+    return tableFiles.find(tableName) != tableFiles.end();
+}
+
+bool Database::columnExists(const std::string& tableName, const std::string& columnName) {
+    std::ifstream tableFile(tableFiles[tableName]);
+    if (!tableFile.is_open()) {
+        return false;
+    }
+
+    std::string line;
+    while (std::getline(tableFile, line)) {
+        if (line.find("Columns:") != std::string::npos) {
+            return line.find(columnName) != std::string::npos;
+        }
+    }
+    return false;
+}
+
+bool Database::evaluateCondition(const Record& record, conditionNode* condition, const std::unordered_map<std::string, int>& columnOffset) {
+    if (!condition) {
+        return true; // No condition means always true
+    }
+
+    if (condition->left && condition->right) {
+        bool leftResult = evaluateCondition(record, condition->left, columnOffset);
+        bool rightResult = evaluateCondition(record, condition->right, columnOffset);
+        if (condition->op == conditionNode::AND) {
+            return leftResult && rightResult;
+        } else if (condition->op == conditionNode::OR) {
+            return leftResult || rightResult;
+        }
+    } else {
+        // This is a leaf node with an actual condition
+        std::istringstream recordData(record.data);
+        std::string value;
+        int currentOffset = 1;
+        while (std::getline(recordData, value, ',')) {
+            if (currentOffset == columnOffset.at(condition->columnName)) {
+                if (condition->rightOperandType == conditionNode::INT) {
+                    int recordValue = std::stoi(value);
+                    switch (condition->op) {
+                        case conditionNode::EQUAL:
+                            return recordValue == condition->intval;
+                        case conditionNode::NOT_EQUAL:
+                            return recordValue != condition->intval;
+                        case conditionNode::GREATER:
+                            return recordValue > condition->intval;
+                        case conditionNode::LESS:
+                            return recordValue < condition->intval;
+                        default:
+                            return false;
+                    }
+                } else if (condition->rightOperandType == conditionNode::STRING) {
+                    switch (condition->op) {
+                        case conditionNode::EQUAL:
+                            return value == condition->chval;
+                        case conditionNode::NOT_EQUAL:
+                            return value != condition->chval;
+                        default:
+                            return false;
+                    }
+                }
+            }
+            ++currentOffset;
+        }
+    }
+
+    return false;
 }
 
 // 递归遍历条件节点

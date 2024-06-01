@@ -6,6 +6,8 @@
 #define MYDBMS_DATABASE_H
 
 #include <string>
+#include <unordered_map>
+#include "Pager.h"
 
 #define STATE_SYS 0
 #define STATE_DB 1
@@ -195,10 +197,18 @@ private:
     int currentState;
     const std::string dataPath = "../data";
     std::string currentDatabase;
+    std::unordered_map<std::string, std::string> tableFiles;
 
     bool validate(const std::string& databaseName);
 
     void traverseConditions(conditionNode *node);
+
+    bool evaluateCondition(const Record &record, conditionNode *condition,
+                           const std::unordered_map<std::string, int> &columnOffset);
+
+    bool tableExists(const std::string &tableName);
+
+    bool columnExists(const std::string &tableName, const std::string &columnName);
 };
 
 
