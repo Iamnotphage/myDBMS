@@ -2,10 +2,10 @@ PageNumber: 0
 prevPage: -1
 nextPage: -1
 Columns:id:0,sname:1,sage:2,ssex:3
-recordsCount: 55
+recordsCount: 54
 pageState: 0
 Infimum: 1
-Supermum: 55
+Supermum: 54
 PageDirectory:
 1;1,chen,20,0
 1;2,clay,20,1
@@ -61,4 +61,3 @@ PageDirectory:
 1;52,Jicpv,3,1
 1;53,CHEN,20,0
 1;54,CHEN,20,0
-1;55,JUSTNAME,null,null

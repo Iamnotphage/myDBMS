@@ -431,6 +431,7 @@ void Database::select(struct selectNode *node) {
         Pager* page = (this->currentPage && this->currentPage->path == this->dataPath + "/" + this->currentDatabase + "\\" + tableHead->tableName + ".txt")
                       ? this->currentPage
                       : pager.readPage(0);
+        this->currentPage = page;
 
         while (page) {
             for (const Record& record : page->records) {
@@ -515,6 +516,7 @@ bool Database::evaluateCondition(const Record& record, conditionNode* condition,
         while (std::getline(recordData, value, ',')) {
             if (currentOffset == columnOffset.at(condition->columnName)) {
                 if (condition->rightOperandType == conditionNode::INT) {
+                    // std::cout << value << std::endl;
                     int recordValue = std::stoi(value);
                     switch (condition->op) {
                         case conditionNode::EQUAL:
@@ -712,25 +714,81 @@ void Database::update(struct updateNode *node) { // 应该是assignment有问题
     // TEST: UPDATE testTable SET id=3,name='chen',score=100 WHERE money='infinity';
     // UPDATE testTable SET id=3,score=100 WHERE money='1';
     // UPDATE testTable SET id=3,score='100' WHERE money='1' AND id = 3 AND id = '4';
-    // 打印表名
-    std::cout << "Table Name: " << node->tableName << std::endl;
+    // update student set sage = 21 where ssex = 1;
+    // Step 1: Check current system state
+    if (this->currentState != STATE_DB) {
+        std::cerr << "[INFO] No database selected" << std::endl;
+        return;
+    }
 
-    // 遍历赋值
-    std::cout << "Traverse Assignments" << std::endl;
+    // Step 2: Check if table exists
+    if (!tableExists(node->tableName)) {
+        std::cerr << "Table '" << node->tableName << "' does not exist" << std::endl;
+        return;
+    }
+
+    // Step 3: Check if columns to be updated exist
     struct assignmentNode* assignmentHead = node->assignments;
     while (assignmentHead != nullptr) {
-        std::cout << "Column name: " << assignmentHead->columnName << std::endl;
-        if (assignmentHead->type == assignmentNode::INT) {
-            std::cout << "INT value: " << assignmentHead->intval << std::endl;
-        } else if (assignmentHead->type == assignmentNode::STRING) {
-            std::cout << "STRING value: " << assignmentHead->chval << std::endl;
+        if (!columnExists(node->tableName, assignmentHead->columnName)) {
+            std::cerr << "Column '" << assignmentHead->columnName << "' does not exist in table '" << node->tableName << "'" << std::endl;
+            return;
         }
         assignmentHead = assignmentHead->next;
     }
 
-    // 遍历条件
-    std::cout << "Traverse Conditions" << std::endl;
-    traverseConditions(node->conditions);
+    // Step 4: Read and update records
+    std::string tablePath = tableFiles[node->tableName];
+    Pager pager(tablePath);
+//    std::cout << "tablePath: " << tablePath << std::endl;
+//    std::cout << "currentPath: " << this->currentPage->path << std::endl;
+    Pager* page = (this->currentPage && tablePath == this->currentPage->path)
+                  ? this->currentPage
+                  : pager.readPage(0);
+    this->currentPage = page;
+
+    while (page) {
+        for (Record& record : page->records) {
+            if (evaluateCondition(record, node->conditions, page->fileHeader.columnOffset)) {
+                // Apply updates to the record
+                std::istringstream dataStream(record.data);
+                std::string value;
+                std::vector<std::string> values;
+                while (std::getline(dataStream, value, ',')) {
+                    values.push_back(value);
+                }
+
+                assignmentHead = node->assignments;
+                while (assignmentHead != nullptr) {
+                    int offset = page->fileHeader.columnOffset[assignmentHead->columnName] - 1;
+                    if (assignmentHead->type == assignmentNode::INT) {
+                        values[offset] = std::to_string(assignmentHead->intval);
+                    } else if (assignmentHead->type == assignmentNode::STRING) {
+                        values[offset] = assignmentHead->chval;
+                    }
+                    assignmentHead = assignmentHead->next;
+                }
+
+                // Update record data
+                std::ostringstream updatedData;
+                for (size_t i = 0; i < values.size(); ++i) {
+                    if (i > 0) {
+                        updatedData << ",";
+                    }
+                    updatedData << values[i];
+                }
+                record.data = updatedData.str();
+                page->isDirty = true;
+            }
+        }
+
+        // Move to the next page if exists
+        if (page->fileHeader.nextPage != -1) {
+            page = pager.readPage(page->fileHeader.nextPage);
+        } else {
+            break;
+        }
+    }
 }
 
 void Database::deleteFrom(struct deleteNode *node) {
