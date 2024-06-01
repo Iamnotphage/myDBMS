@@ -198,6 +198,7 @@ private:
     const std::string dataPath = "../data";
     std::string currentDatabase;
     std::unordered_map<std::string, std::string> tableFiles;
+    Pager* currentPage;
 
     bool validate(const std::string& databaseName);
 

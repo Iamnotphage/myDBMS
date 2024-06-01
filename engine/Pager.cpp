@@ -5,6 +5,7 @@
 #include "Pager.h"
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 Pager::Pager(const std::string& path) {
     this->path = path;
@@ -99,5 +100,55 @@ Pager* Pager::readPage(int ID) {
 }
 
 void Pager::writePage() {
+    std::ofstream tableFile(path);
+    if (!tableFile) {
+        std::cerr << "Failed to write page back: " << path << std::endl;
+        return;
+    }
 
+    // Write FileHeader (metadata)
+    tableFile << "PageNumber: " << fileHeader.pageNumber << "\n";
+    tableFile << "prevPage: " << fileHeader.prevPage << "\n";
+    tableFile << "nextPage: " << fileHeader.nextPage << "\n";
+    tableFile << "Columns:";
+    std::vector<std::pair<std::string, int>> sortedColumns(fileHeader.columnOffset.begin(), fileHeader.columnOffset.end());
+
+    // Sort columns by their offset value
+    std::sort(sortedColumns.begin(), sortedColumns.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+        return a.second < b.second;
+    });
+
+    int count = 0;
+    for (const auto& pair : sortedColumns) {
+        tableFile << pair.first << ":" << pair.second;
+        if (count != sortedColumns.size() - 1) {
+            tableFile << ",";
+        }
+        count++;
+    }
+    tableFile << "\n";
+
+    // Write PageHeader
+    tableFile << "recordsCount: " << pageHeader.recordsCount << "\n";
+    tableFile << "pageState: " << pageHeader.pageState << "\n";
+    tableFile << "Infimum: " << Infimum << "\n";
+    tableFile << "Supermum: " << Supermum << "\n";
+
+    // Write PageDirectory
+    tableFile << "PageDirectory:";
+    for (int offset : pageDirectory) {
+        tableFile << " " << offset;
+    }
+    tableFile << "\n";
+
+    // Write Records
+    for (const Record& record : records) {
+        tableFile << record.nextOffset << ";" << record.id << "," << record.data << "\n";
+    }
+
+    tableFile.close();
+}
+
+bool Pager::isFull() {
+    return this->pageHeader.recordsCount == ROW_PER_PAGE - 8;
 }

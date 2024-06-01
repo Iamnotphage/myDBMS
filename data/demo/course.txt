@@ -1,0 +1,23 @@
+PageNumber: 0
+prevPage: -1
+nextPage: -1
+Columns:id:0,cname:1,cid:2
+recordsCount: 14
+pageState: 0
+Infimum: 1
+Supermum: 14
+PageDirectory:
+1;1,Database,1
+1;2,Compiler,2
+1;3,DataStruct,3
+1;4,OperatingSystem,4
+1;5,Networking,5
+1;6,Linux,6
+1;7,Algorithm,7
+1;8,TEST,8
+1;9,test2,9
+1;10,test3,10
+1;11,test4,11
+1;12,test5,12
+1;13,justName,null
+1;14,test6,13

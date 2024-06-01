@@ -54,7 +54,7 @@ public:
 
     Pager* readPage(int ID); // 将页从外存读入内存，这里还没实现BTree，先根据path读文件，遍历页来找目标id所在的页
     void writePage(); // 页的状态设为DIRTY，并在内存中更新页
-
+    bool isFull();
 };
 
 

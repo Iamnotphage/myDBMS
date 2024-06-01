@@ -13,6 +13,7 @@ using namespace std::filesystem;
 
 Database::Database() {
     this->currentState = STATE_SYS;
+    this->currentPage = nullptr;
 }
 
 Database::~Database() = default;
@@ -101,6 +102,7 @@ void Database::useDatabase(const std::string& databaseName) {
         return;
     }
 
+    if(this->currentPage != nullptr)this->currentPage->writePage(); // 切换数据库，写回页
     this->currentDatabase = databaseName;
     this->currentState = STATE_DB;
     this->tableFiles.clear();
@@ -322,9 +324,9 @@ void Database::createTable(const std::string &tableName, struct columnNode *colu
     }
 
     // Write FileHeader (metadata)
-    tableFile << "PageNumber:0\n";
-    tableFile << "prevPage:-1\n";
-    tableFile << "nextPage:1\n";
+    tableFile << "PageNumber: 0\n";
+    tableFile << "prevPage: -1\n";
+    tableFile << "nextPage: 1\n";
     tableFile << "Columns:";
 
     // Write columns with offsets
@@ -339,7 +341,7 @@ void Database::createTable(const std::string &tableName, struct columnNode *colu
     tableFile << "\n";
 
     // Write PageHeader
-    tableFile << "recordsCount:0\n";
+    tableFile << "recordsCount: 0\n";
     tableFile << "Infimum:" << 99999 << "\n";
     tableFile << "Supermum:" << -1 << "\n";
 
@@ -420,11 +422,11 @@ void Database::select(struct selectNode *node) {
     // Reverse the order of columnsToSelect
     // std::reverse(columnsToSelect.begin(), columnsToSelect.end());
 
-    std::cout << "===================" << std::endl;
-    for(const auto& s : columnsToSelect){
-        std::cout << s << std::endl;
-    }
-    std::cout << "===================" << std::endl;
+    //    std::cout << "===================" << std::endl;
+    //    for(const auto& s : columnsToSelect){
+    //        std::cout << s << std::endl;
+    //    }
+    //    std::cout << "===================" << std::endl;
 
     // Step 4: Retrieve records and apply conditions
     tableHead = node->tables;
@@ -593,28 +595,121 @@ void Database::traverseConditions(struct conditionNode* node) {
 void Database::insert(struct insertNode *node) {
     // TEST: insert into testTable (id,name,score) values(10,'chen',100);
     // insert into testTable values(10,'chen',100);
-    // 打印表名
-    std::cout << "Table Name: " << node->tableName << std::endl;
-
-    // 遍历列名
-    std::cout << "Traverse Column Names" << std::endl;
-    struct columnNode* columnHead = node->columnNames;
-    while (columnHead != nullptr) {
-        std::cout << "Column name: " << columnHead->columnName << std::endl;
-        columnHead = columnHead->next;
+    // insert into student(sname,sage,ssex) values('CHEN',20,0);
+    /**
+     * insert 要做的事情
+     * 1. 检查系统状态
+     * 2. 检查表名是否存在
+     * 3. 检查当前页是否满，满则读下一页（从外存换页，要检查页是否DIRTY，如果DIRTY则要写回外存）
+     * 4. 未满则在当前页（内存）写入，并标记DIRTY
+     * 5. 检查是否指定列名struct columnNode* columnNames，若为空，则按照值全部插入；若不为空，未指定的列名写入null
+     * 6. 写入一行记录成功，暂时不写回外存，只有下一次换页才写回外存 (COW)
+     */
+    // Step 1: Check current system state
+    if (this->currentState != STATE_DB) {
+        std::cerr << "[INFO] No database selected" << std::endl;
+        return;
     }
 
-    // 遍历值
-    std::cout << "Traverse Values" << std::endl;
-    struct valueNode* valueHead = node->values;
-    while (valueHead != nullptr) {
-        if (valueHead->type == valueNode::INT) {
-            std::cout << "INT value: " << valueHead->intval << std::endl;
-        } else if (valueHead->type == valueNode::STRING) {
-            std::cout << "STRING value: " << valueHead->chval << std::endl;
+    // Step 2: Check if table exists
+    if (!tableExists(node->tableName)) {
+        std::cerr << "Table '" << node->tableName << "' does not exist" << std::endl;
+        return;
+    }
+
+    // Step 3: Check if current page is full
+    std::string tablePath = tableFiles[node->tableName];
+    Pager pager(tablePath);
+    this->currentPage = pager.readPage(0);
+
+    while (this->currentPage->isFull()) {
+        if (this->currentPage->fileHeader.nextPage != -1) {
+
+            if (this->currentPage->isDirty) {
+                // Write back the dirty page to disk
+                this->currentPage->writePage();
+            }
+            this->currentPage = pager.readPage(this->currentPage->fileHeader.nextPage);
+        } else {
+
+            // Check if current page is dirty
+            if (this->currentPage->isDirty) {
+                // Write back the dirty page to disk
+                this->currentPage->writePage();
+            }
+
+            // Create a new page
+            Pager* newPage = new Pager(tablePath);
+            newPage->fileHeader.pageNumber = this->currentPage->fileHeader.pageNumber + 1;
+            newPage->fileHeader.prevPage = this->currentPage->fileHeader.pageNumber;
+            this->currentPage->fileHeader.nextPage = newPage->fileHeader.pageNumber;
+            newPage->fileHeader.nextPage = -1;
+            newPage->isDirty = true;
+
+            // Update current page and write the new page
+            this->currentPage->writePage();
+            this->currentPage = newPage;
         }
-        valueHead = valueHead->next;
     }
+
+    // Step 5: Write record into current page
+    Record newRecord;
+    this->currentPage->Supermum++;
+    newRecord.id = this->currentPage->Supermum;
+    newRecord.nextOffset = 1;
+
+    std::ostringstream recordStream;
+    struct valueNode* value = node->values;
+
+    if (node->columnNames) {
+        // Insert values based on specified columns
+        std::unordered_map<std::string, std::string> columnValues;
+        struct columnNode* colNode = node->columnNames;
+
+        while (colNode && value) {
+            if (value->type == valueNode::INT) {
+                columnValues[colNode->columnName] = std::to_string(value->intval);
+            } else {
+                columnValues[colNode->columnName] = value->chval;
+            }
+            colNode = colNode->next;
+            value = value->next;
+        }
+
+        // Sort columns by their offset value
+        std::vector<std::pair<std::string, int>> sortedColumns(this->currentPage->fileHeader.columnOffset.begin(), this->currentPage->fileHeader.columnOffset.end());
+        std::sort(sortedColumns.begin(), sortedColumns.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+            return a.second < b.second;
+        });
+
+        // Fill missing columns with "null"
+        for (const auto& col : sortedColumns) {
+            if (col.first == "id") continue;
+            if (columnValues.find(col.first) != columnValues.end()) {
+                recordStream << columnValues[col.first];
+            } else {
+                recordStream << "null";
+            }
+            recordStream << ",";
+        }
+    } else {
+        // Insert all values sequentially
+        while (value) {
+            if (value->type == valueNode::INT) {
+                recordStream << value->intval;
+            } else {
+                recordStream << value->chval;
+            }
+            recordStream << ",";
+            value = value->next;
+        }
+    }
+
+    newRecord.data = recordStream.str();
+    newRecord.data.pop_back(); // Remove trailing comma
+    this->currentPage->records.push_back(newRecord);
+    this->currentPage->pageHeader.recordsCount++;
+    this->currentPage->isDirty = true;
 }
 
 void Database::update(struct updateNode *node) { // 应该是assignment有问题
