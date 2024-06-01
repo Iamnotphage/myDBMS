@@ -23,9 +23,26 @@ Pager* Pager::readPage(int ID) {
 
     auto* page = new Pager(this->path);
 
+    unsigned int startLine = ID * ROW_PER_PAGE + 1; // Starting line for the page
+    unsigned int endLine = (ID + 1) * ROW_PER_PAGE; // Ending line for the page
+
     bool pageDirectoryRead = false;
     std::string line;
+    int currentLine = 0;
+
     while (std::getline(tableFile, line)) {
+        ++currentLine;
+
+        // Skip lines until reaching the start of the desired page
+        if (currentLine < startLine) {
+            continue;
+        }
+
+        // Stop reading once past the end of the desired page
+        if (currentLine > endLine) {
+            break;
+        }
+
         std::istringstream iss(line);
         std::string key;
         if (!pageDirectoryRead) {
@@ -66,7 +83,6 @@ Pager* Pager::readPage(int ID) {
             }
         } else {
             // This line is a record
-            // std::cout << "TEST" << std::endl;
             std::istringstream recordStream(line);
             Record record;
             char delimiter;
@@ -77,12 +93,6 @@ Pager* Pager::readPage(int ID) {
             page->records.push_back(record);
         }
     }
-
-//    std::cout << "TEST" << std::endl;
-//    for(const Record& r : page->records){
-//        std::cout << r.id << std::endl;
-//        std::cout << r.data << std::endl;
-//    }
 
     tableFile.close();
     return page;
