@@ -793,12 +793,44 @@ void Database::update(struct updateNode *node) { // 应该是assignment有问题
 
 void Database::deleteFrom(struct deleteNode *node) {
     // TEST: DELETE FROM STUDENT WHERE (SAGE>21) AND (SSEX=0);
-    // print tableName
-    std::cout << "Table Name: " << node->tableName << std::endl;
+    // Step 1: Check current system state
+    if (this->currentState != STATE_DB) {
+        std::cerr << "[INFO] No database selected" << std::endl;
+        return;
+    }
 
-    struct conditionNode* conditionHead = node->conditions;
-    if(conditionHead != nullptr){
-        traverseConditions(conditionHead);
+    // Step 2: Check if table exists
+    if (!tableExists(node->tableName)) {
+        std::cerr << "Table '" << node->tableName << "' does not exist" << std::endl;
+        return;
+    }
+
+    // Step 3: Read and delete records
+    std::string tablePath = tableFiles[node->tableName];
+    Pager pager(tablePath);
+    Pager* page = (this->currentPage && tablePath == this->currentPage->path)
+                  ? this->currentPage
+                  : pager.readPage(0);
+    this->currentPage = page;
+
+    while (page) {
+        auto it = page->records.begin();
+        while (it != page->records.end()) {
+            if (evaluateCondition(*it, node->conditions, page->fileHeader.columnOffset)) {
+                it = page->records.erase(it);
+                page->pageHeader.recordsCount--;
+                page->isDirty = true;
+            } else {
+                ++it;
+            }
+        }
+
+        // Move to the next page if exists
+        if (page->fileHeader.nextPage != -1) {
+            page = pager.readPage(page->fileHeader.nextPage);
+        } else {
+            break;
+        }
     }
 }
 
