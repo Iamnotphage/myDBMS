@@ -55,7 +55,7 @@ void shell::start() {
 
             if(state == 0) {
                 // ACCEPT
-                printf("[INFO] statement accept.\n");
+                // printf("[INFO] statement accept.\n");
             } else if(state == 1) {
                 // ABORT
                 printf("[INFO] grammar wrong.\n");

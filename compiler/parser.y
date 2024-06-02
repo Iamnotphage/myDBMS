@@ -296,14 +296,14 @@ operator:
 // Right operand can be a number or a string
 rightOperand:
     NUMBER                              {
-                                            printf("[INFO] A NUMBER.\n");
+                                            // printf("[INFO] A NUMBER.\n");
 											// 新建结点只是为了传递值
 											$$ = new struct conditionNode;
                                             $$->rightOperandType = conditionNode::INT;
 											$$->intval = $<intval>1;
                                         }
     | STRING                            {
-                                            printf("[INFO] A STRING.\n");
+                                            // printf("[INFO] A STRING.\n");
                                             $$ = new struct conditionNode;
                                             $$->rightOperandType = conditionNode::STRING;
 											$$->chval = $<chval>1;
@@ -343,13 +343,13 @@ values:
 
 value:
 	NUMBER								{
-											printf("[INFO] Identified value NUMBER.\n");
+											// printf("[INFO] Identified value NUMBER.\n");
 											$$ = new struct valueNode;
 											$$->type = valueNode::INT;
 											$$->intval = $<intval>1;
 										}
 	| STRING							{
-											printf("[INFO] Identified value STRING.\n");
+											// printf("[INFO] Identified value STRING.\n");
 											$$ = new struct valueNode;
 											$$->type = valueNode::STRING;
 											$$->chval = $<chval>1;
@@ -360,7 +360,7 @@ value:
 updateStatement:
 	UPDATE tableName SET assignments WHERE conditions ';'
 										{	
-											printf("[INFO] Identified a update command.\n");
+											// printf("[INFO] Identified a update command.\n");
 											$$ = new struct updateNode;
 											$$->tableName = $2;
 											$$->assignments = $4;
@@ -371,11 +371,11 @@ updateStatement:
 
 assignments:
 	assignment							{
-											printf("[INFO] Identified a assignment.\n");
+											// printf("[INFO] Identified a assignment.\n");
 											$$ = $1;
 										}
 	| assignment ',' assignments		{
-											printf("[INFO] Identified a assignments.\n");
+											// printf("[INFO] Identified a assignments.\n");
 											$$ = $1;
 											$$->next = $3;
 										}
@@ -383,7 +383,7 @@ assignments:
 
 assignment:
 	columnName '=' value				{
-											printf("[INFO] Identified a assignments [a=b].\n");
+											// printf("[INFO] Identified a assignments [a=b].\n");
 											$$ = new struct assignmentNode;
 											$$->columnName = $1;
 											if($3->type == valueNode::INT){
