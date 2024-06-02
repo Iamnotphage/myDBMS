@@ -2,10 +2,10 @@ PageNumber: 0
 prevPage: -1
 nextPage: -1
 Columns:id:0,cname:1,cid:2
-recordsCount: 14
+recordsCount: 12
 pageState: 0
 Infimum: 1
-Supermum: 14
+Supermum: 12
 PageDirectory:
 1;1,Database,1
 1;2,Compiler,2
@@ -19,5 +19,3 @@ PageDirectory:
 1;10,test3,10
 1;11,test4,11
 1;12,test5,12
-1;13,justName,null
-1;14,test6,13

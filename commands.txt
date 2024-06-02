@@ -1,0 +1,28 @@
+show databases;
+CREATE DATABASE tmp;
+SHOW DATABASES;
+create database del;
+SHOW DATABASES;
+DROP DATABASE del;
+SHOW DATABASES;
+use demo;
+show tables;
+create table tmp(id INT, testname CHAR(25), sex INT);
+show tables;
+drop table tmp;
+show tables;
+select * from student;
+insert into student values('TEST',20,2);
+insert into student values('TEST2',999,2);
+insert into student values('TEST3',999,2);
+insert into student values('TEST4',999,2);
+insert into student values('TEST5',999,2);
+insert into student values('TEST6',999,2);
+select * from student;
+insert into student(sname,sage) values('TEST7',555);
+insert into student(sname,sage) values('TEST8',666);
+select * from student;
+select * from course;
+insert into course(cname, cid) values('TETSCOURSE', 13);
+select * from course;
+exit

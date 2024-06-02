@@ -273,7 +273,7 @@ void Database::dropTable(const std::string &tableName) {
     if(this->currentState == STATE_SYS){
         std::cout << "[INFO] No database selected" << std::endl;
     }else if(this->currentState == STATE_DB){
-        std::string tablePath = dataPath + "/" + this->currentDatabase + "/" + tableName;
+        std::string tablePath = dataPath + "/" + this->currentDatabase + "/" + tableName + ".txt";
 
         try {
             if (exists(tablePath) && is_regular_file(tablePath)) {
@@ -616,9 +616,19 @@ void Database::insert(struct insertNode *node) {
     }
 
     // Step 3: Check if current page is full
+//    std::string tablePath = tableFiles[node->tableName];
+//    Pager pager(tablePath);
+//    this->currentPage = pager.readPage(0);
     std::string tablePath = tableFiles[node->tableName];
     Pager pager(tablePath);
-    this->currentPage = pager.readPage(0);
+
+//        std::cout << "currentPage->path : " << this->currentPage->path << std::endl;
+//        std::cout << "tableName: " << tableHead->tableName << std::endl;
+//        std::cout << "tableName: " << this->dataPath << std::endl;
+    Pager* page = (this->currentPage && this->currentPage->path == this->dataPath + "/" + this->currentDatabase + "\\" + node->tableName + ".txt")
+                  ? this->currentPage
+                  : pager.readPage(0);
+    this->currentPage = page;
 
     while (this->currentPage->isFull()) {
         if (this->currentPage->fileHeader.nextPage != -1) {
