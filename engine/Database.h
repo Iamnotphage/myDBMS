@@ -198,7 +198,7 @@ private:
     const std::string dataPath = "../data";
     std::string currentDatabase;
     std::unordered_map<std::string, std::string> tableFiles;
-    Pager* currentPage;
+    Pager* currentPage; // 当前页 (这里可以改为存放页的某类容器，可以实现LRU)
 
     bool validate(const std::string& databaseName);
 

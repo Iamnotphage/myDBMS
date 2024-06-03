@@ -550,9 +550,306 @@ lex程序比较简单，没什么特别需要注意的地方，本人遇到的�
 
 ### Parser
 
+在YACC程序，语法分析主要写一些文法产生式，还有对应的规则。
 
+我设计语句如下：
+
+开始语句为`startStatement`，其语法树如下:
+
+![startStatement](./images/startStatement.png)
+
+分为六大部分，`systemControl`,`createStatement`,`queryStatement`,`insertStatement`,`updateStatement`,`deleteStatement`。
+
+#### systemControl
+
+主要是对数据库和表进行创建、删除、使用、列举:
+
+```c++
+/* System-Control Statements */
+systemControl:
+	CREATE DATABASE databaseName ';'	
+	| SHOW DATABASES ';'				
+	| USE databaseName ';'				
+	| DROP DATABASE databaseName ';'	
+	| SHOW TABLES ';'					
+	| DROP TABLE tableName ';'			
+	;
+
+databaseName:
+	ID									
+	;
+
+tableName:
+	ID
+	;
+```
+
+#### createStatement
+
+主要是在已经选中的数据库中创建表:
+
+```c++
+// Create Statement.
+createStatement:
+	CREATE TABLE tableName '('columnsDefinition')' ';'
+	;
+
+columnsDefinition:
+	columnName columnType
+	| columnName columnType ',' columnsDefinition
+	;
+
+columnName:
+	ID
+	;
+
+columnType:
+	INT
+	| CHAR '(' NUMBER ')'
+	;
+```
+
+#### queryStatement
+
+主要是在已经选中的数据库中进行查询:
+
+```c++
+// Query Statement.
+queryStatement:
+	SELECT columnNames FROM tableNames ';'
+	| SELECT columnNames FROM tableNames WHERE conditions ';'
+	;
+
+columnNames:
+	'*'
+	| columnName
+	| columnName ',' columnNames
+	;
+
+tableNames:
+	tableName
+	| tableName ',' tableNames
+	;
+
+// Top-level conditions rules
+conditions:
+    condition
+    | '(' conditions ')'
+    | conditions AND conditions
+    | conditions OR conditions
+    ;
+
+// Single condition rule
+condition:
+    columnName operator rightOperand
+    ;
+
+// Operator definitions
+operator:
+    '<'
+    | '>'
+    | '='
+    | '!' '='
+    | '<' '>'
+    ;
+
+// Right operand can be a number or a string
+rightOperand:
+    NUMBER
+    | STRING
+    ;
+```
+
+需要特别注意的是conditions的语法树，后续对应的规则比较复杂。
+
+#### insertStatement
+
+主要是在已经选中的数据库中进行插入:
+
+```c++
+// Insert statement.
+insertStatement:
+	INSERT INTO tableName '(' columnNames ')' VALUES '(' values ')' ';'
+	| INSERT INTO tableName VALUES '(' values ')' ';'
+	;
+
+values:
+	value
+	| value ',' values
+	;
+
+value:
+	NUMBER
+	| STRING
+	;
+```
+
+#### updateStatement
+
+主要是在已经选中的数据库中进行更新:
+
+```c++
+// Update statement.
+updateStatement:
+	UPDATE tableName SET assignments WHERE conditions ';'
+	;
+
+assignments:
+	assignment
+	| assignment ',' assignments
+	;
+
+assignment:
+	columnName '=' value
+	;
+```
+
+#### deleteStatement
+
+主要是在已经选中的数据库中进行删除:
+
+```c++
+// Delete statement.
+deleteStatement:
+	DELETE FROM tableName ';'
+	| DELETE FROM tableName WHERE conditions ';'
+	;
+```
+
+## 后端接口设计
+
+前端是lex和yacc共同分析输入语句，识别到对应的文法后，执行对应的代码。
+
+这里设计`Database.h`暴露给前端一些接口用于内核执行数据库语句。
+
+在语法分析的同时，将一些链表结构或者树结构创建，所以需要声明一些结点，方便后端执行。
+
+```c++
+#define STATE_SYS 0
+#define STATE_DB 1 // 选中数据库的状态才能增删改查
+
+struct columnNode{
+    std::string columnName;
+    int charLength;
+    struct columnNode* next = nullptr;
+};
+
+// for SELECT node;
+struct tableNode{
+    std::string tableName;
+    struct tableNode* next = nullptr;
+};
+
+struct conditionNode{
+    std::string columnName;
+    // 如果op是AND或者OR，说明是一个中间结点，有左右子树，cloumnName和value为空。
+    // 如果这个结点是叶子节点，则代表这是一个表达式结点，columnName op value;
+    enum op{
+        AND, OR, GREATER, LESS, EQUAL, NOT_EQUAL
+    }op;
+    enum rightOperandType{
+        INT, STRING
+    }rightOperandType;
+    int intval;
+    std::string chval;
+
+    struct conditionNode* left = nullptr;
+    struct conditionNode* right = nullptr;
+};
+
+// SELECT [columnNames] FROM [tables] WHERE [conditions];
+struct selectNode{
+    struct columnNode* columnNames = nullptr;
+    struct tableNode* tables = nullptr;
+    struct conditionNode* conditions = nullptr;
+};
+
+// for INSERT node;
+struct valueNode{
+    enum type{
+        INT, STRING
+    }type;
+    int intval;
+    std::string chval;
+    struct valueNode* next = nullptr;
+};
+
+// INSERT INTO [table] ([columnNames]) VALUES ([values]);
+// INSERT INTO [table] VALUES ([values]);
+struct insertNode{
+    std::string tableName;
+    struct columnNode* columnNames = nullptr;
+    struct valueNode* values = nullptr;
+};
+
+// for UPDATE node;
+struct assignmentNode{
+    std::string columnName;
+    enum type{
+        INT, STRING
+    }type;
+    int intval;
+    std::string chval;
+    struct assignmentNode* next = nullptr;
+};
+
+// UPDATE [tableName] SET [assignments] WHERE [conditions];
+struct updateNode{
+    std::string tableName;
+    struct assignmentNode* assignments = nullptr;
+    struct conditionNode* conditions = nullptr;
+};
+
+// DELETE FROM [tableName];
+// DELETE FROM [tableName] WHERE [conditions];
+struct deleteNode{
+    std::string tableName;
+    struct conditionNode* conditions = nullptr;
+};
+
+// API in Databases.h
+class Database {
+public:
+    void showDatabases();
+    void useDatabase(const std::string& databaseName);
+    void dropDatabase(const std::string& databaseName);
+    void createDatabase(const std::string& databaseName);
+    void showTables();
+    void dropTable(const std::string& tableName);
+    void createTable(const std::string& tableName, struct columnNode* columnHead);
+    void select(struct selectNode* node);
+    void insert(struct insertNode* node);
+    void update(struct updateNode* node);
+    void deleteFrom(struct deleteNode* node);
+    
+private:
+    int currentState; // 当前系统状态
+    const std::string dataPath = "../data";
+    std::string currentDatabase; // 当前选中的数据库
+    std::unordered_map<std::string, std::string> tableFiles;
+    Pager* currentPage; // 当前页 (这里可以改为存放页的某类容器，可以实现LRU)
+}
+```
+
+其他结点结构都很简单，都是拉链结构。
+
+唯独`conditionNode`要特别注意,遍历这个结点相当于LDR遍历二叉树(前序遍历)
+
+比如`... WHERE id = 3 AND name = 'chen'`，传递给后端的树结构如下:
+
+![conditionNodeExample](./images/conditionNodeExample.png)
+
+即，`op`的枚举类型是`AND`或`OR`，则说明这个结点是一个连接的结点，或者说是一个父亲结点。
+
+只有叶子结点是有`columnName`和`intval`或`chval`的。
+
+这样就能清晰表示条件。
 
 ## 存储结构设计
+
+总体结构如下:
+
+![memoryArch](./images/memoryArch.png)
 
 采取分页的思想，一个文件为一张表，一张表内有若干页，一页内有若干行。
 
@@ -563,3 +860,66 @@ lex程序比较简单，没什么特别需要注意的地方，本人遇到的�
 * 再设计一个`Infimum + Supermum`，用来记录当前页最小和最大的记录。
 * 接下来设计一个`Page Directory`，对下文的`User Records`做一个简单索引。
 * 最后才是`User Records`用来存储每一行的数据，数据之间物理上按先后顺序存储，逻辑上按主键顺序形成单链表。
+
+主要在`Pager.h`中实现页机制(读入内存的页):
+
+```c++
+const unsigned int PAGE_SIZE = 4096;
+const unsigned int FILE_HEADER_SIZE = sizeof(int) * 3;
+const unsigned int PAGE_HEADER_SIZE = sizeof(int) * 2;
+const unsigned int RECORDS_SIZE = PAGE_SIZE - FILE_HEADER_SIZE - PAGE_HEADER_SIZE;
+const unsigned int ROW_PER_PAGE = 8 + RECORDS_SIZE / 64; // 8 + 63 = 71; 大概63行数据，8行头信息
+const int DEFAULT_INFIMUM = 99999;
+const int DEFAULT_SUPERMUM = -1;
+
+struct FileHeader {
+    int pageNumber; // 当前页的页号
+    std::unordered_map<std::string, int> columnOffset; // 在Records中列名对应的偏移（第几个逗号）
+    int prevPage; // 上一页偏移 (-PAGE_SIZE)
+    int nextPage; // 下一页偏移 (+PAGE_SIZE)
+};
+
+struct PageHeader {
+    int recordsCount; // 当前页记录的数目
+    int pageState; // 页的状态
+};
+
+struct Record {
+    int id; // 主键
+    std::string data; // 数据(逗号分隔)
+    int nextOffset; // 下一条数据的偏移量
+};
+
+class Pager {
+public:
+    std::string path; // 当前页所属表名（即文件名）
+    FileHeader fileHeader;
+    PageHeader pageHeader;
+    int Infimum; // 当前页最小记录
+    int Supermum; // 当前页最大记录
+    bool isDirty;
+    std::vector<int> pageDirectory; // 页目录存储记录的偏移量
+    std::vector<Record> records; // 当前页的记录
+    
+    Pager(const std::string& filePath); // 初始化时从外存读页
+    
+    Pager* readPage(int ID); // 将页从外存读入内存，这里还没实现BTree，先根据path读文件，遍历页来找目标id所在的页
+    void writePage(); // 页的状态设为DIRTY，并在内存中更新页
+    bool isFull();
+};
+```
+
+## 简单的脏页机制
+
+在频繁IO的程序中，程序的瓶颈往往是IO速率。
+
+所以这里简单实现一个脏页机制，只有切换数据库等操作再将脏页写回外存，从而保证数据一致性。
+
+这样在频繁对一张表进行操作时，不需要大量IO（比如频繁插入或更新数据后又读数据，在内存的页暂时不写回外存，这样提升效率）
+
+![IODemo](./images/IODemo.png)
+
+在`Pager.h`中有一项`bool isDirty`,只有进行插入删除更新的操作后，该页标记为`DIRTY`
+
+同时，在`Database.h`中有一个当前页`Pager* currentPage`指向读入内存的当前页，在选中数据库后的操作都是在内存页完成，直到类似切换数据库的指令调用，再写入外存。同时更新`currentPage`的指向。
+
