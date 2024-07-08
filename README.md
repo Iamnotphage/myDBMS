@@ -923,3 +923,71 @@ public:
 
 同时，在`Database.h`中有一个当前页`Pager* currentPage`指向读入内存的当前页，在选中数据库后的操作都是在内存页完成，直到类似切换数据库的指令调用，再写入外存。同时更新`currentPage`的指向。
 
+# 批处理测试
+
+这里采用重定向符号来对程序大量输入测试语句。用的bat（批处理程序）
+
+```bat
+cls
+cd .\cmake-build-release\
+cls
+.\myDBMS.exe < ..\commands.txt
+```
+
+其中，`commands.txt`中的测试数据为:
+
+```text
+show databases;
+CREATE DATABASE tmp;
+SHOW DATABASES;
+create database del;
+SHOW DATABASES;
+DROP DATABASE del;
+SHOW DATABASES;
+use demo;
+show tables;
+create table tmp(id INT, testname CHAR(25), sex INT);
+show tables;
+drop table tmp;
+show tables;
+select * from course;
+insert into course(cname, cid) values('TETSCOURSE', 13);
+select * from course;
+select * from student;
+insert into student values('TEST',20,2);
+insert into student values('TEST2',999,2);
+insert into student values('TEST3',999,2);
+insert into student values('TEST4',999,2);
+insert into student values('TEST5',999,2);
+insert into student values('TEST6',999,2);
+select * from student;
+insert into student(sname,sage) values('TEST7',555);
+insert into student(sname,sage) values('TEST8',666);
+select * from student;
+select sname from student;
+select ssex from student;
+select sname,sage from student;
+select sname,sage from student where sage > 20;
+select sname,sage from student where sage < 20;
+select sname,sage from student where sage = 20;
+select sname,sage from student where sage <> 20;
+select sname,sage from student where sage != 20;
+select sname,sage from student where (((sage = 20)));
+select sname,sage from student where sage > 18 and sage < 35;
+select sname,sage from student where (sage > 18) and (sage < 35);
+select sname,sage from student where sage < 18 or sage > 35;
+select sname,sage from student where (sage < 18) or (sage > 35);
+select sname,sage from student where sname = 'chen' and sage = 20;
+select * from student;
+delete from student where sage > 100;
+select * from student;
+delete from student where sname = 'TEST' and sage = 20 and ssex = 2;
+select * from student;
+select * from student where sname = 'chen';
+update student set sage = 21 where sname = 'chen';
+select * from student where sname = 'chen';
+select * from student where sname = 'clay';
+update student set sage = 999 where sname = 'clay';
+select * from student where sname = 'clay';
+exit
+```
